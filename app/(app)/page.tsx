@@ -5,11 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { saveLastUser } from '@/lib/lastUser'
 import CalorieRing from '@/components/CalorieRing'
 import MacroBar from '@/components/MacroBar'
 import FoodCard from '@/components/FoodCard'
 import ActivityCard from '@/components/ActivityCard'
 import DateNav from '@/components/DateNav'
+import ProfileSheet from '@/components/ProfileSheet'
 import type { FoodEntry, ActivityEntry, UserProfile } from '@/lib/types'
 
 export default function DashboardPage() {
@@ -31,6 +33,7 @@ function Dashboard() {
   const [userEmail, setUserEmail] = useState('')
   const [loading, setLoading] = useState(true)
   const [earliestDate, setEarliestDate] = useState<string | null>(null)
+  const [profileOpen, setProfileOpen] = useState(false)
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -71,6 +74,16 @@ function Dashboard() {
     loadEarliestDate()
   }, [supabase])
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const cbEmail = params.get('cb_email')
+    const cbProvider = params.get('cb_provider')
+    if (cbEmail) {
+      saveLastUser(cbEmail, (cbProvider as 'google' | 'email') ?? 'google')
+      window.history.replaceState({}, '', '/')
+    }
+  }, [])
+
   async function handleDeleteFood(id: string) {
     const { error } = await supabase.from('food_entries').delete().eq('id', id)
     if (error) {
@@ -107,13 +120,17 @@ function Dashboard() {
   const avatarLetter = userEmail ? userEmail[0].toUpperCase() : '?'
 
   return (
+    <>
     <div className="p-4">
       {/* Top bar */}
       <div className="flex items-center justify-between mb-6 pt-2">
         <DateNav date={date} onChange={setDate} earliestDate={earliestDate ?? today} />
-        <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold text-white">
+        <button
+          onClick={() => setProfileOpen(true)}
+          className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold text-white hover:bg-indigo-500 transition-colors"
+        >
           {avatarLetter}
-        </div>
+        </button>
       </div>
 
       {/* Calorie Ring */}
@@ -210,5 +227,13 @@ function Dashboard() {
         )}
       </div>
     </div>
+
+    <ProfileSheet
+      open={profileOpen}
+      onClose={() => setProfileOpen(false)}
+      email={userEmail}
+      avatarLetter={avatarLetter}
+    />
+    </>
   )
 }

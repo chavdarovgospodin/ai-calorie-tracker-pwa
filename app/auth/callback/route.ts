@@ -37,5 +37,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=auth_failed`)
   }
 
-  return NextResponse.redirect(`${origin}${next}`)
+  const { data: { user } } = await supabase.auth.getUser()
+  const email = user?.email ?? ''
+
+  const redirectUrl = new URL(`${origin}${next}`)
+  if (email) {
+    redirectUrl.searchParams.set('cb_email', email)
+    redirectUrl.searchParams.set('cb_provider', 'google')
+  }
+
+  return NextResponse.redirect(redirectUrl.toString())
 }

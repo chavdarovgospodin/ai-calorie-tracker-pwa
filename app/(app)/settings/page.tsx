@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { LogOut, Save } from 'lucide-react'
+import { Save } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { calculateFromProfile } from '@/lib/calculations'
@@ -145,15 +145,8 @@ export default function SettingsPage() {
   return (
     <div className="p-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 pt-2">
+      <div className="mb-6 pt-2">
         <h1 className="text-lg font-bold text-[#F8FAFC]">Settings</h1>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 text-sm text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl px-3 py-1.5 transition-colors"
-        >
-          <LogOut size={14} />
-          Logout
-        </button>
       </div>
 
       {/* Account info */}

@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { saveLastUser, getLastUser } from '@/lib/lastUser'
 import { toast } from 'sonner'
 
 export default function LoginPage() {
@@ -27,8 +28,13 @@ function LoginForm() {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
+  const [lastUser, setLastUser] = useState<{ email: string; provider: 'google' | 'email' } | null>(null)
 
   const supabase = createClient()
+
+  useEffect(() => {
+    setLastUser(getLastUser())
+  }, [])
 
   async function handleGoogleLogin() {
     setGoogleLoading(true)
@@ -52,9 +58,22 @@ function LoginForm() {
       setError(error.message)
       setLoading(false)
     } else {
+      saveLastUser(email, 'email')
       toast.success('Welcome back!')
       router.push('/')
       router.refresh()
+    }
+  }
+
+  async function handleContinueAsLastUser() {
+    if (!lastUser) return
+    if (lastUser.provider === 'google') {
+      handleGoogleLogin()
+    } else {
+      setEmail(lastUser.email)
+      setTimeout(() => {
+        document.getElementById('password-input')?.focus()
+      }, 100)
     }
   }
 
@@ -70,6 +89,40 @@ function LoginForm() {
         </div>
 
         <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-6">
+          {/* Continue as last user */}
+          {lastUser && (
+            <div className="mb-5">
+              <p className="text-xs text-[#64748B] text-center mb-3">
+                Welcome back
+              </p>
+              <button
+                onClick={handleContinueAsLastUser}
+                className="w-full flex items-center gap-3 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-indigo-500/30 rounded-xl px-4 py-3 transition-colors"
+              >
+                <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+                  {lastUser.email[0].toUpperCase()}
+                </div>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="text-sm font-semibold text-[#F8FAFC] truncate">
+                    {lastUser.email}
+                  </p>
+                  <p className="text-xs text-[#64748B]">
+                    {lastUser.provider === 'google' ? 'Continue with Google' : 'Continue with password'}
+                  </p>
+                </div>
+                <div className="text-indigo-400 text-xs font-medium">
+                  Tap to sign in →
+                </div>
+              </button>
+              <button
+                onClick={() => setLastUser(null)}
+                className="w-full text-center text-xs text-[#64748B] hover:text-[#F8FAFC] mt-2 py-1 transition-colors"
+              >
+                Use a different account
+              </button>
+            </div>
+          )}
+
           {/* Google OAuth */}
           <button
             onClick={handleGoogleLogin}
@@ -113,6 +166,7 @@ function LoginForm() {
             <div>
               <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Password</label>
               <input
+                id="password-input"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
