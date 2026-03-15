@@ -14,7 +14,6 @@ const FoodSchema = z.object({
   confidence: z.number().min(0).max(1),
 })
 
-const MAX_TEXT_LENGTH = 500
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
 
 export async function POST(request: Request) {
@@ -43,39 +42,42 @@ export async function POST(request: Request) {
 
     // 2. Input validation
     const body = await request.json()
+    const { enrichedPrompt, imageBase64 } = body
 
-    if (body.text && typeof body.text === 'string' && body.text.length > MAX_TEXT_LENGTH) {
-      return NextResponse.json({ error: 'Text too long' }, { status: 400 })
+    if (!enrichedPrompt || typeof enrichedPrompt !== 'string') {
+      return NextResponse.json({ error: 'enrichedPrompt is required' }, { status: 400 })
     }
 
-    if (body.imageBase64) {
-      if (typeof body.imageBase64 !== 'string') {
+    if (imageBase64) {
+      if (typeof imageBase64 !== 'string') {
         return NextResponse.json({ error: 'Invalid image' }, { status: 400 })
       }
-      if (body.imageBase64.length > MAX_IMAGE_SIZE_BYTES) {
+      if (imageBase64.length > MAX_IMAGE_SIZE_BYTES) {
         return NextResponse.json({ error: 'Image too large (max 5MB)' }, { status: 400 })
       }
-    }
-
-    if (!body.text && !body.imageBase64) {
-      return NextResponse.json({ error: 'Text or image is required' }, { status: 400 })
     }
 
     // 3. Gemini analysis
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
-    const prompt = `Analyze this food and return ONLY valid JSON (no markdown, no code blocks):
-${body.text ? `Food description: ${body.text}` : `Food image provided. Additional info: ${typeof body.description === 'string' ? body.description.slice(0, 200) : 'none'}`}
+    const prompt = `You are a precise nutritional analyzer for a calorie tracking app.
 
-Return exactly this JSON structure:
-{"name":"string","calories":number,"protein":number,"carbs":number,"fat":number,"fiber":number,"confidence":0.0-1.0}`
+${enrichedPrompt}
+
+Based on the above food description, provide accurate nutritional information.
+Be realistic with estimates. If quantities are approximate, use typical serving sizes.
+
+Return ONLY valid JSON, no markdown:
+{"name":"string","calories":number,"protein":number,"carbs":number,"fat":number,"fiber":number,"confidence":0.0-1.0}
+
+confidence reflects how certain you are about the nutritional values (1.0 = exact data available, 0.5 = rough estimate)`
 
     let result
-    if (body.imageBase64) {
+    if (imageBase64) {
       result = await model.generateContent([
         prompt,
-        { inlineData: { mimeType: 'image/jpeg', data: body.imageBase64 } },
+        { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
       ])
     } else {
       result = await model.generateContent(prompt)

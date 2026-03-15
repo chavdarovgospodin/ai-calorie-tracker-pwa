@@ -60,6 +60,12 @@ export interface ActivityAnalysis {
   confidence: number
 }
 
+export interface ValidationResult {
+  valid: boolean
+  reason: string | null
+  enriched_prompt: string | null
+}
+
 export interface DailyStats {
   totalCalories: number
   totalProtein: number

@@ -7,6 +7,17 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import type { FoodAnalysis } from '@/lib/types'
 
+type AnalysisPhase = 'idle' | 'validating' | 'analyzing' | 'done' | 'error'
+
+async function toBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve((reader.result as string).split(',')[1])
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 function ConfidenceBadge({ confidence }: { confidence: number }) {
   if (confidence >= 0.8) {
     return (
@@ -48,7 +59,8 @@ function AddFood() {
   const [notes, setNotes] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [analyzing, setAnalyzing] = useState(false)
+  const [phase, setPhase] = useState<AnalysisPhase>('idle')
+  const [validationError, setValidationError] = useState<string | null>(null)
   const [result, setResult] = useState<FoodAnalysis | null>(null)
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -59,6 +71,8 @@ function AddFood() {
       setImageFile(file)
       setImagePreview(URL.createObjectURL(file))
       setResult(null)
+      setPhase('idle')
+      setValidationError(null)
     }
   }
 
@@ -72,39 +86,60 @@ function AddFood() {
       return
     }
 
-    setAnalyzing(true)
+    setPhase('validating')
+    setValidationError(null)
     setResult(null)
 
     try {
+      // Build body for validation
       let body: Record<string, string>
       if (tab === 'photo' && imageFile) {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onload = () => {
-            const dataUrl = reader.result as string
-            resolve(dataUrl.split(',')[1])
-          }
-          reader.onerror = reject
-          reader.readAsDataURL(imageFile)
-        })
+        const base64 = await toBase64(imageFile)
         body = { imageBase64: base64, description }
       } else {
         body = { text }
       }
 
-      const res = await fetch('/api/analyze-food', {
+      // Step 1: Validate
+      const validateRes = await fetch('/api/validate-food', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
+      if (!validateRes.ok) throw new Error('Validation request failed')
+      const validation = await validateRes.json()
 
-      if (!res.ok) throw new Error('Analysis failed')
-      const data = await res.json()
+      if (!validation.valid) {
+        setPhase('error')
+        setValidationError(validation.reason ?? "This doesn't look like food. Please try again.")
+        return
+      }
+
+      // Step 2: Analyze with enriched_prompt
+      setPhase('analyzing')
+
+      const analyzeBody: Record<string, string> = {
+        enrichedPrompt: validation.enriched_prompt,
+      }
+      if (tab === 'photo' && imageFile) {
+        const base64 = await toBase64(imageFile)
+        analyzeBody.imageBase64 = base64
+      }
+
+      const analyzeRes = await fetch('/api/analyze-food', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(analyzeBody),
+      })
+      if (!analyzeRes.ok) throw new Error('Analysis failed')
+      const data = await analyzeRes.json()
+
       setResult(data)
+      setPhase('done')
+
     } catch {
-      toast.error('Failed to analyze food. Please try again.')
-    } finally {
-      setAnalyzing(false)
+      setPhase('error')
+      setValidationError('Something went wrong. Please try again.')
     }
   }
 
@@ -270,37 +305,79 @@ function AddFood() {
       {/* Analyze Button */}
       <button
         onClick={handleAnalyze}
-        disabled={analyzing}
+        disabled={phase === 'validating' || phase === 'analyzing'}
         className="w-full mt-5 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {analyzing ? (
-          <>
-            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            Analyzing...
-          </>
-        ) : (
-          <>
-            <Sparkles size={16} />
-            Analyze with AI
-          </>
-        )}
+        {phase === 'idle' && <><Sparkles size={16} /> Analyze with AI</>}
+        {phase === 'validating' && <>Checking...</>}
+        {phase === 'analyzing' && <>Analyzing...</>}
+        {phase === 'done' && <><Sparkles size={16} /> Re-analyze</>}
+        {phase === 'error' && <><Sparkles size={16} /> Analyze with AI</>}
       </button>
 
-      {/* Loading skeleton */}
-      {analyzing && (
-        <div className="mt-4 bg-[#111118] border border-[#1E1E2E] rounded-2xl p-4 space-y-3">
-          <div className="h-5 bg-[#1A1A24] rounded-lg animate-pulse w-2/3" />
-          <div className="h-4 bg-[#1A1A24] rounded-lg animate-pulse w-1/2" />
-          <div className="grid grid-cols-4 gap-2">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-12 bg-[#1A1A24] rounded-xl animate-pulse" />
-            ))}
+      {/* VALIDATING STATE */}
+      {phase === 'validating' && (
+        <div className="mt-5 bg-[#111118] border border-[#1E1E2E] rounded-2xl p-5 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-indigo-600/20 flex items-center justify-center flex-shrink-0">
+            <span className="w-5 h-5 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin block" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-[#F8FAFC]">Checking your input...</p>
+            <p className="text-xs text-[#64748B] mt-0.5">Making sure this is food we can analyze</p>
           </div>
         </div>
       )}
 
-      {/* Result card */}
-      {result && !analyzing && (
+      {/* ANALYZING STATE */}
+      {phase === 'analyzing' && (
+        <div className="mt-5 bg-[#111118] border border-indigo-500/30 rounded-2xl p-5">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-10 h-10 rounded-full bg-indigo-600/20 flex items-center justify-center flex-shrink-0">
+              <span className="w-5 h-5 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin block" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-[#F8FAFC]">Analyzing nutrition...</p>
+              <p className="text-xs text-[#64748B] mt-0.5">Calculating calories and macros</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="h-5 bg-[#1A1A24] rounded-lg animate-pulse w-2/3" />
+            <div className="h-8 bg-[#1A1A24] rounded-lg animate-pulse w-1/3" />
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              <div className="h-10 bg-[#1A1A24] rounded-lg animate-pulse" />
+              <div className="h-10 bg-[#1A1A24] rounded-lg animate-pulse" />
+              <div className="h-10 bg-[#1A1A24] rounded-lg animate-pulse" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ERROR STATE */}
+      {phase === 'error' && validationError && (
+        <div className="mt-5 bg-[#111118] border border-red-500/30 rounded-2xl p-5">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <AlertCircle size={20} className="text-red-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-red-400 mb-1">Couldn&apos;t analyze this</p>
+              <p className="text-sm text-[#64748B] leading-relaxed">{validationError}</p>
+              <button
+                onClick={() => {
+                  setPhase('idle')
+                  setValidationError(null)
+                }}
+                className="mt-3 text-sm text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+              >
+                ← Try again
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DONE STATE — result card */}
+      {phase === 'done' && result && (
         <div className="mt-4 bg-[#111118] border border-[#1E1E2E] rounded-2xl p-4">
           <div className="flex items-start justify-between mb-3">
             <div>
