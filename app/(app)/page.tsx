@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Zap } from 'lucide-react'
 import { toast } from 'sonner'
@@ -13,6 +13,14 @@ import DateNav from '@/components/DateNav'
 import type { FoodEntry, ActivityEntry, UserProfile } from '@/lib/types'
 
 export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="p-4"><div className="w-[220px] h-[220px] rounded-full bg-[#111118] animate-pulse mx-auto mt-20" /></div>}>
+      <Dashboard />
+    </Suspense>
+  )
+}
+
+function Dashboard() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const today = new Date().toISOString().split('T')[0]
@@ -74,7 +82,8 @@ export default function DashboardPage() {
   const totalFat = foodEntries.reduce((sum, e) => sum + (e.fat ?? 0), 0)
   const totalBurned = activityEntries.reduce((sum, e) => sum + e.calories_burned, 0)
 
-  const target = profile?.daily_calorie_target ?? 2000
+  const baseTarget = profile?.daily_calorie_target ?? 2000
+  const target = baseTarget + totalBurned
   // Macro targets (rough % of calories)
   const proteinTarget = Math.round((target * 0.25) / 4)
   const carbsTarget = Math.round((target * 0.45) / 4)

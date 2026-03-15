@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Toaster } from 'sonner'
 import './globals.css'
@@ -8,6 +8,10 @@ const inter = Inter({
   subsets: ['latin'],
 })
 
+export const viewport: Viewport = {
+  themeColor: '#0A0A0F',
+}
+
 export const metadata: Metadata = {
   title: {
     default: 'Calio — Track smarter. Eat better.',
@@ -15,7 +19,6 @@ export const metadata: Metadata = {
   },
   description: 'AI-powered calorie and macro tracking. Log meals with a photo or text description and let AI do the work.',
   manifest: '/manifest.json',
-  themeColor: '#0A0A0F',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
