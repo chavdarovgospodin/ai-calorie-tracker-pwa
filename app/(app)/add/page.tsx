@@ -209,39 +209,72 @@ function AddFood() {
 
   async function handleSaveFavorite() {
     if (!result) return
+    setSaving(true)
+
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) { setSaving(false); return }
 
-    const existing = favorites.find(
-      (f) => f.name.toLowerCase() === result.name.toLowerCase()
-    )
-    if (existing) {
-      toast.info('Already in favorites')
-      return
-    }
-
-    const { data, error } = await supabase
+    const { data: existing } = await supabase
       .from('favorite_foods')
-      .insert({
-        user_id: user.id,
-        name: result.name,
-        calories: result.calories,
-        protein: result.protein,
-        carbs: result.carbs,
-        fat: result.fat,
-        fiber: result.fiber,
-        use_count: 1,
-      })
-      .select()
-      .single()
+      .select('id, use_count')
+      .eq('user_id', user.id)
+      .ilike('name', result.name)
+      .maybeSingle()
 
-    if (error) {
-      toast.error('Failed to save favorite')
+    if (existing) {
+      const { error } = await supabase
+        .from('favorite_foods')
+        .update({
+          calories: result.calories,
+          protein: result.protein,
+          carbs: result.carbs,
+          fat: result.fat,
+          fiber: result.fiber,
+          use_count: existing.use_count + 1,
+        })
+        .eq('id', existing.id)
+
+      if (error) {
+        toast.error('Failed to update favorite')
+      } else {
+        setFavorites(prev =>
+          prev
+            .map(f => f.id === existing.id
+              ? { ...f, calories: result!.calories, protein: result!.protein, carbs: result!.carbs, fat: result!.fat, fiber: result!.fiber, use_count: existing.use_count + 1 }
+              : f
+            )
+            .sort((a, b) => b.use_count - a.use_count)
+        )
+        toast.success('Favorite updated ⭐')
+      }
     } else {
-      setFavorites((prev) => [data, ...prev])
-      toast.success('Saved to favorites!')
+      const { data: newFav, error } = await supabase
+        .from('favorite_foods')
+        .insert({
+          user_id: user.id,
+          name: result.name,
+          calories: result.calories,
+          protein: result.protein,
+          carbs: result.carbs,
+          fat: result.fat,
+          fiber: result.fiber,
+          use_count: 1,
+        })
+        .select()
+        .single()
+
+      if (error) {
+        toast.error('Failed to save favorite')
+      } else {
+        setFavorites(prev =>
+          [newFav, ...prev].sort((a, b) => b.use_count - a.use_count)
+        )
+        toast.success('Added to favorites ⭐')
+      }
     }
+
+    setSaving(false)
   }
 
   async function handleLogFavorite(fav: FavoriteFood) {

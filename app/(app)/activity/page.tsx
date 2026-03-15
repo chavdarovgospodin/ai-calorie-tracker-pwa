@@ -114,34 +114,60 @@ function AddActivity() {
 
   async function handleSaveFavorite() {
     if (!result) return
+
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const existing = favorites.find(
-      (f) => f.description.toLowerCase() === result.activityName.toLowerCase()
-    )
-    if (existing) {
-      toast.info('Already in favorites')
-      return
-    }
-
-    const { data, error } = await supabase
+    const { data: existing } = await supabase
       .from('favorite_activities')
-      .insert({
-        user_id: user.id,
-        description: result.activityName,
-        calories_burned: result.caloriesBurned,
-        use_count: 1,
-      })
-      .select()
-      .single()
+      .select('id, use_count')
+      .eq('user_id', user.id)
+      .ilike('description', result.activityName)
+      .maybeSingle()
 
-    if (error) {
-      toast.error('Failed to save favorite')
+    if (existing) {
+      const { error } = await supabase
+        .from('favorite_activities')
+        .update({
+          calories_burned: result.caloriesBurned,
+          use_count: existing.use_count + 1,
+        })
+        .eq('id', existing.id)
+
+      if (error) {
+        toast.error('Failed to update favorite')
+      } else {
+        setFavorites(prev =>
+          prev
+            .map(f => f.id === existing.id
+              ? { ...f, calories_burned: result!.caloriesBurned, use_count: existing.use_count + 1 }
+              : f
+            )
+            .sort((a, b) => b.use_count - a.use_count)
+        )
+        toast.success('Favorite updated ⭐')
+      }
     } else {
-      setFavorites((prev) => [data, ...prev])
-      toast.success('Saved to favorites!')
+      const { data: newFav, error } = await supabase
+        .from('favorite_activities')
+        .insert({
+          user_id: user.id,
+          description: result.activityName,
+          calories_burned: result.caloriesBurned,
+          use_count: 1,
+        })
+        .select()
+        .single()
+
+      if (error) {
+        toast.error('Failed to save favorite')
+      } else {
+        setFavorites(prev =>
+          [newFav, ...prev].sort((a, b) => b.use_count - a.use_count)
+        )
+        toast.success('Added to favorites ⭐')
+      }
     }
   }
 
