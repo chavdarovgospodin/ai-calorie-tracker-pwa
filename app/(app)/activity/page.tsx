@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Sparkles, CheckCircle, AlertCircle, Flame } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -30,7 +30,17 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
 }
 
 export default function AddActivityPage() {
+  return (
+    <Suspense fallback={<div className="p-4"><div className="h-12 bg-[#111118] rounded-xl animate-pulse" /></div>}>
+      <AddActivity />
+    </Suspense>
+  )
+}
+
+function AddActivity() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const date = searchParams.get('date') ?? new Date().toISOString().split('T')[0]
   const [description, setDescription] = useState('')
   const [notes, setNotes] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
@@ -87,11 +97,9 @@ export default function AddActivityPage() {
       return
     }
 
-    const today = new Date().toISOString().split('T')[0]
-
     const { error } = await supabase.from('activity_entries').insert({
       user_id: user.id,
-      date: today,
+      date,
       description: result.activityName,
       calories_burned: result.caloriesBurned,
       notes: notes || null,

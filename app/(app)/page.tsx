@@ -164,7 +164,7 @@ function Dashboard() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-[#F8FAFC]">Activity</h2>
           <button
-            onClick={() => router.push('/activity')}
+            onClick={() => router.push(`/activity?date=${date}`)}
             className="flex items-center gap-1.5 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-[#F8FAFC] rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors"
           >
             <Zap size={14} />
@@ -177,7 +177,7 @@ function Dashboard() {
           <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-6 text-center">
             <p className="text-[#64748B] text-sm">No activity logged</p>
             <button
-              onClick={() => router.push('/activity')}
+              onClick={() => router.push(`/activity?date=${date}`)}
               className="mt-3 text-amber-400 hover:text-amber-300 text-sm font-medium"
             >
               + Log workout
