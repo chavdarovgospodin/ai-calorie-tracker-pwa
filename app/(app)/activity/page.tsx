@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Sparkles, CheckCircle, AlertCircle, Flame, Star, Trash2 as TrashIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -41,14 +41,23 @@ function FavoriteActivityRow({
   isLogging: boolean
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const confirmRef = useRef(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function handleDelete(e: React.MouseEvent) {
     e.stopPropagation()
-    if (!confirmDelete) {
+    if (!confirmRef.current) {
+      confirmRef.current = true
       setConfirmDelete(true)
-      setTimeout(() => setConfirmDelete(false), 3000)
+      timerRef.current = setTimeout(() => {
+        confirmRef.current = false
+        setConfirmDelete(false)
+      }, 3000)
       return
     }
+    if (timerRef.current) clearTimeout(timerRef.current)
+    confirmRef.current = false
+    setConfirmDelete(false)
     onDelete(fav.id)
   }
 
@@ -69,7 +78,7 @@ function FavoriteActivityRow({
         onClick={handleDelete}
         className={`text-xs font-semibold rounded-lg px-2 py-1 transition-colors ${
           confirmDelete
-            ? 'bg-red-500 text-white'
+            ? 'bg-red-500 text-white animate-pulse'
             : 'text-[#64748B] hover:text-red-400'
         }`}
       >
@@ -195,6 +204,7 @@ function AddActivity() {
       date,
       description: fav.description,
       calories_burned: fav.calories_burned,
+      duration_minutes: null,
       notes: null,
       ai_confidence: null,
     })
@@ -246,7 +256,13 @@ function AddActivity() {
 
       if (!validation.valid) {
         setPhase('error')
-        setValidationError(validation.reason ?? "This doesn't look like a physical activity. Please try again.")
+        if (validation.error_type === 'not_an_activity') {
+          setValidationError("This doesn't look like a physical activity. Please describe a workout, sport, or exercise.")
+        } else if (validation.error_type === 'too_vague') {
+          setValidationError('Please be more specific about your activity.')
+        } else {
+          setValidationError(validation.reason ?? "This doesn't look like a physical activity. Please try again.")
+        }
         return
       }
 
@@ -286,6 +302,7 @@ function AddActivity() {
       date,
       description: result.activityName,
       calories_burned: result.caloriesBurned,
+      duration_minutes: result.durationMinutes ?? null,
       notes: notes || null,
       ai_confidence: result.confidence,
     })

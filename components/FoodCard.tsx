@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Trash2 } from 'lucide-react'
 import type { FoodEntry } from '@/lib/types'
 
@@ -11,14 +11,23 @@ interface FoodCardProps {
 
 export default function FoodCard({ entry, onDelete }: FoodCardProps) {
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const confirmRef = useRef(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function handleDelete(e: React.MouseEvent) {
     e.stopPropagation()
-    if (!confirmDelete) {
+    if (!confirmRef.current) {
+      confirmRef.current = true
       setConfirmDelete(true)
-      setTimeout(() => setConfirmDelete(false), 4000)
+      timerRef.current = setTimeout(() => {
+        confirmRef.current = false
+        setConfirmDelete(false)
+      }, 3000)
       return
     }
+    if (timerRef.current) clearTimeout(timerRef.current)
+    confirmRef.current = false
+    setConfirmDelete(false)
     onDelete(entry.id)
   }
 
@@ -28,6 +37,9 @@ export default function FoodCard({ entry, onDelete }: FoodCardProps) {
         <p className="font-semibold text-[#F8FAFC] truncate">{entry.name}</p>
         {entry.quantity && (
           <p className="text-sm text-[#64748B] mt-0.5">{entry.quantity}</p>
+        )}
+        {entry.notes && (
+          <p className="text-xs text-[#64748B] mt-0.5">{entry.notes}</p>
         )}
         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
           {entry.protein !== null && (
@@ -52,9 +64,10 @@ export default function FoodCard({ entry, onDelete }: FoodCardProps) {
         <span className="text-xl font-bold tabular-nums text-[#F8FAFC]">{entry.calories}</span>
         <button
           onClick={handleDelete}
+          title={confirmDelete ? 'Click again to confirm delete' : undefined}
           className={`flex-shrink-0 transition-all duration-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold ${
             confirmDelete
-              ? 'bg-red-500 text-white'
+              ? 'bg-red-500 text-white animate-pulse'
               : 'text-[#64748B] hover:text-red-400 hover:bg-red-500/10'
           }`}
         >

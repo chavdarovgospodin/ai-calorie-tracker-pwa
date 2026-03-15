@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 interface DateNavProps {
   date: string // YYYY-MM-DD
   onChange: (date: string) => void
+  earliestDate?: string // earliest date with tracked data
 }
 
 function formatDate(dateStr: string): string {
@@ -26,14 +27,10 @@ function addDays(dateStr: string, days: number): string {
   return date.toLocaleDateString('en-CA')
 }
 
-export default function DateNav({ date, onChange }: DateNavProps) {
+export default function DateNav({ date, onChange, earliestDate }: DateNavProps) {
   const today = new Date().toLocaleDateString('en-CA')
 
-  const minDate = (() => {
-    const d = new Date()
-    d.setDate(d.getDate() - 90)
-    return d.toLocaleDateString('en-CA')
-  })()
+  const minDate = earliestDate ?? today
 
   const isToday = date === today
   const isMinDate = date <= minDate

@@ -33,9 +33,17 @@ export default function RegisterPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signUp({ email, password })
+    const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) {
-      setError(error.message)
+      if (error.message.toLowerCase().includes('already') || error.code === 'user_already_exists') {
+        setError('An account with this email already exists. Try signing in instead.')
+      } else {
+        setError(error.message)
+      }
+      setLoading(false)
+    } else if (data.user && data.user.identities && data.user.identities.length === 0) {
+      // Supabase returns a fake user with no identities when email is already registered
+      setError('An account with this email already exists. Try signing in instead.')
       setLoading(false)
     } else {
       toast.success('Account created! Please check your email to confirm.')
@@ -92,6 +100,7 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                autoComplete="email"
                 placeholder="you@example.com"
                 className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
               />

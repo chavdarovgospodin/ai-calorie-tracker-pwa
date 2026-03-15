@@ -6,6 +6,7 @@ import { cookies } from 'next/headers'
 
 const ValidatorSchema = z.object({
   valid: z.boolean(),
+  error_type: z.enum(['not_an_activity', 'too_vague', 'other']).nullable().optional(),
   reason: z.string().nullable(),
   enriched_prompt: z.string().nullable(),
 })
@@ -59,9 +60,9 @@ Rules:
 - Valid: step counts ("10,000 steps", "walked 5km")
 - Valid: vague but physical activities ("played with my kids for 1 hour", "stood all day at work")
 - Valid: activities without duration if intensity is clear
-- Invalid: sedentary activities (watching TV, reading, sleeping, sitting)
-- Invalid: non-activity text (greetings, food descriptions, random text)
-- Invalid: too vague to estimate ("did some stuff", "was active today")
+- Invalid: sedentary activities (watching TV, reading, sleeping, sitting, driving) → error_type: "not_an_activity"
+- Invalid: non-activity text (greetings, food descriptions, random text) → error_type: "not_an_activity"
+- Invalid: too vague to estimate ("did some stuff", "was active today") → error_type: "too_vague"
 
 If VALID, create an enriched_prompt that:
 1. Identifies the specific activity type clearly
@@ -71,10 +72,10 @@ If VALID, create an enriched_prompt that:
 5. Structures everything for accurate calorie estimation
 6. Is written in English regardless of input language
 
-If INVALID, write a friendly reason in the same language as the user's input explaining what went wrong and what they should describe instead.
+If INVALID, set error_type to the matching category and write a friendly reason in the same language as the user's input explaining what went wrong.
 
 Return ONLY valid JSON, no markdown:
-{"valid": boolean, "reason": string | null, "enriched_prompt": string | null}`
+{"valid": boolean, "error_type": "not_an_activity" | "too_vague" | "other" | null, "reason": string | null, "enriched_prompt": string | null}`
 
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error('Gemini timeout')), 20000)

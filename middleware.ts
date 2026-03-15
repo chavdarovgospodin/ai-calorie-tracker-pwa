@@ -40,17 +40,22 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Allow onboarding page without profile check (prevents infinite redirect)
-  if (path === '/onboarding') {
-    return supabaseResponse
-  }
-
-  // Check onboarding completion for all other app routes
+  // Check onboarding completion
   const { data: profile } = await supabase
     .from('user_profiles')
     .select('onboarding_completed')
     .eq('user_id', user.id)
     .single()
+
+  // Redirect completed users away from onboarding
+  if (path === '/onboarding' && profile?.onboarding_completed) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+
+  // Allow onboarding page for users who haven't completed it
+  if (path === '/onboarding') {
+    return supabaseResponse
+  }
 
   if (!profile?.onboarding_completed) {
     return NextResponse.redirect(new URL('/onboarding', request.url))

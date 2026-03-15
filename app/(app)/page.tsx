@@ -30,6 +30,7 @@ function Dashboard() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [userEmail, setUserEmail] = useState('')
   const [loading, setLoading] = useState(true)
+  const [earliestDate, setEarliestDate] = useState<string | null>(null)
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -55,6 +56,20 @@ function Dashboard() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  useEffect(() => {
+    async function loadEarliestDate() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const [foodRes, activityRes] = await Promise.all([
+        supabase.from('food_entries').select('date').eq('user_id', user.id).order('date', { ascending: true }).limit(1).maybeSingle(),
+        supabase.from('activity_entries').select('date').eq('user_id', user.id).order('date', { ascending: true }).limit(1).maybeSingle(),
+      ])
+      const dates = [foodRes.data?.date, activityRes.data?.date].filter(Boolean) as string[]
+      if (dates.length > 0) setEarliestDate(dates.sort()[0])
+    }
+    loadEarliestDate()
+  }, [supabase])
 
   async function handleDeleteFood(id: string) {
     const { error } = await supabase.from('food_entries').delete().eq('id', id)
@@ -95,7 +110,7 @@ function Dashboard() {
     <div className="p-4">
       {/* Top bar */}
       <div className="flex items-center justify-between mb-6 pt-2">
-        <DateNav date={date} onChange={setDate} />
+        <DateNav date={date} onChange={setDate} earliestDate={earliestDate ?? today} />
         <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold text-white">
           {avatarLetter}
         </div>

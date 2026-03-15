@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Trash2, Flame } from 'lucide-react'
 import type { ActivityEntry } from '@/lib/types'
 
@@ -11,14 +11,23 @@ interface ActivityCardProps {
 
 export default function ActivityCard({ entry, onDelete }: ActivityCardProps) {
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const confirmRef = useRef(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function handleDelete(e: React.MouseEvent) {
     e.stopPropagation()
-    if (!confirmDelete) {
+    if (!confirmRef.current) {
+      confirmRef.current = true
       setConfirmDelete(true)
-      setTimeout(() => setConfirmDelete(false), 4000)
+      timerRef.current = setTimeout(() => {
+        confirmRef.current = false
+        setConfirmDelete(false)
+      }, 3000)
       return
     }
+    if (timerRef.current) clearTimeout(timerRef.current)
+    confirmRef.current = false
+    setConfirmDelete(false)
     onDelete(entry.id)
   }
 
@@ -39,9 +48,10 @@ export default function ActivityCard({ entry, onDelete }: ActivityCardProps) {
         <span className="text-xl font-bold tabular-nums text-amber-400">{entry.calories_burned}</span>
         <button
           onClick={handleDelete}
+          title={confirmDelete ? 'Click again to confirm delete' : undefined}
           className={`flex-shrink-0 transition-all duration-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold ${
             confirmDelete
-              ? 'bg-red-500 text-white'
+              ? 'bg-red-500 text-white animate-pulse'
               : 'text-[#64748B] hover:text-red-400 hover:bg-red-500/10'
           }`}
         >

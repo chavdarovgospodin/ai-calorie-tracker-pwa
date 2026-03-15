@@ -52,14 +52,23 @@ function FavoriteFoodRow({
   isLogging: boolean
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const confirmRef = useRef(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function handleDelete(e: React.MouseEvent) {
     e.stopPropagation()
-    if (!confirmDelete) {
+    if (!confirmRef.current) {
+      confirmRef.current = true
       setConfirmDelete(true)
-      setTimeout(() => setConfirmDelete(false), 3000)
+      timerRef.current = setTimeout(() => {
+        confirmRef.current = false
+        setConfirmDelete(false)
+      }, 3000)
       return
     }
+    if (timerRef.current) clearTimeout(timerRef.current)
+    confirmRef.current = false
+    setConfirmDelete(false)
     onDelete(fav.id)
   }
 
@@ -80,7 +89,7 @@ function FavoriteFoodRow({
         onClick={handleDelete}
         className={`text-xs font-semibold rounded-lg px-2 py-1 transition-colors ${
           confirmDelete
-            ? 'bg-red-500 text-white'
+            ? 'bg-red-500 text-white animate-pulse'
             : 'text-[#64748B] hover:text-red-400'
         }`}
       >
@@ -432,9 +441,13 @@ function AddFood() {
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={4}
+              maxLength={500}
               placeholder="e.g. 2 scrambled eggs with toast and a cup of orange juice"
               className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-3 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors resize-none"
             />
+            <p className={`text-xs mt-1 text-right ${text.length > 450 ? 'text-red-400' : 'text-[#64748B]'}`}>
+              {text.length} / 500
+            </p>
           </div>
         </div>
       )}
@@ -516,7 +529,7 @@ function AddFood() {
       {/* Analyze Button */}
       <button
         onClick={handleAnalyze}
-        disabled={phase === 'validating' || phase === 'analyzing'}
+        disabled={phase === 'validating' || phase === 'analyzing' || (tab === 'text' && text.length > 500)}
         className="w-full mt-5 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {phase === 'idle' && <><Sparkles size={16} /> Analyze with AI</>}
