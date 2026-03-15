@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Sparkles, CheckCircle, AlertCircle, Flame } from 'lucide-react'
+import { ArrowLeft, Sparkles, CheckCircle, AlertCircle, Flame, Star, Trash2 as TrashIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import type { ActivityAnalysis } from '@/lib/types'
+import type { ActivityAnalysis, FavoriteActivity } from '@/lib/types'
 
 function ConfidenceBadge({ confidence }: { confidence: number }) {
   if (confidence >= 0.8) {
@@ -29,6 +29,53 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
   )
 }
 
+function FavoriteActivityRow({
+  fav,
+  onLog,
+  onDelete,
+}: {
+  fav: FavoriteActivity
+  onLog: (fav: FavoriteActivity) => void
+  onDelete: (id: string) => void
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      setTimeout(() => setConfirmDelete(false), 3000)
+      return
+    }
+    onDelete(fav.id)
+  }
+
+  return (
+    <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl px-3 py-2.5 flex items-center gap-2">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-[#F8FAFC] truncate">{fav.description}</p>
+        <p className="text-xs text-amber-400">{fav.calories_burned} kcal burned</p>
+      </div>
+      <button
+        onClick={() => onLog(fav)}
+        className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-600/10 hover:bg-indigo-600/20 px-2.5 py-1 rounded-lg transition-colors"
+      >
+        + Log
+      </button>
+      <button
+        onClick={handleDelete}
+        className={`text-xs font-semibold rounded-lg px-2 py-1 transition-colors ${
+          confirmDelete
+            ? 'bg-red-500 text-white'
+            : 'text-[#64748B] hover:text-red-400'
+        }`}
+      >
+        {confirmDelete ? '?' : <TrashIcon size={13} />}
+      </button>
+    </div>
+  )
+}
+
 export default function AddActivityPage() {
   return (
     <Suspense fallback={<div className="p-4"><div className="h-12 bg-[#111118] rounded-xl animate-pulse" /></div>}>
@@ -47,6 +94,94 @@ function AddActivity() {
   const [validationError, setValidationError] = useState<string | null>(null)
   const [result, setResult] = useState<ActivityAnalysis | null>(null)
   const [saving, setSaving] = useState(false)
+  const [favorites, setFavorites] = useState<FavoriteActivity[]>([])
+
+  useEffect(() => {
+    async function loadFavorites() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('favorite_activities')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('use_count', { ascending: false })
+        .limit(10)
+      if (data) setFavorites(data)
+    }
+    loadFavorites()
+  }, [])
+
+  async function handleSaveFavorite() {
+    if (!result) return
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const existing = favorites.find(
+      (f) => f.description.toLowerCase() === result.activityName.toLowerCase()
+    )
+    if (existing) {
+      toast.info('Already in favorites')
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('favorite_activities')
+      .insert({
+        user_id: user.id,
+        description: result.activityName,
+        calories_burned: result.caloriesBurned,
+        use_count: 1,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      toast.error('Failed to save favorite')
+    } else {
+      setFavorites((prev) => [data, ...prev])
+      toast.success('Saved to favorites!')
+    }
+  }
+
+  async function handleLogFavorite(fav: FavoriteActivity) {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { error } = await supabase.from('activity_entries').insert({
+      user_id: user.id,
+      date,
+      description: fav.description,
+      calories_burned: fav.calories_burned,
+      notes: null,
+      ai_confidence: null,
+    })
+
+    if (error) {
+      toast.error('Failed to log activity')
+      return
+    }
+
+    await supabase
+      .from('favorite_activities')
+      .update({ use_count: fav.use_count + 1 })
+      .eq('id', fav.id)
+
+    toast.success(`${fav.description} logged!`)
+    router.push(`/?date=${date}`)
+  }
+
+  async function handleDeleteFavorite(id: string) {
+    const supabase = createClient()
+    const { error } = await supabase.from('favorite_activities').delete().eq('id', id)
+    if (error) {
+      toast.error('Failed to remove favorite')
+    } else {
+      setFavorites((prev) => prev.filter((f) => f.id !== id))
+    }
+  }
 
   async function handleAnalyze() {
     if (!description.trim()) {
@@ -147,6 +282,23 @@ function AddActivity() {
         </button>
         <h1 className="text-lg font-bold text-[#F8FAFC]">Log Activity</h1>
       </div>
+
+      {/* Favorites */}
+      {favorites.length > 0 && (
+        <div className="mb-5">
+          <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Quick Log</p>
+          <div className="space-y-2">
+            {favorites.map((fav) => (
+              <FavoriteActivityRow
+                key={fav.id}
+                fav={fav}
+                onLog={handleLogFavorite}
+                onDelete={handleDeleteFavorite}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         <div>
@@ -257,18 +409,27 @@ function AddActivity() {
             </div>
             <ConfidenceBadge confidence={result.confidence} />
           </div>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full mt-2 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50"
-          >
-            {saving ? (
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <CheckCircle size={16} />
-            )}
-            Log Activity
-          </button>
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50"
+            >
+              {saving ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <CheckCircle size={16} />
+              )}
+              Log Activity
+            </button>
+            <button
+              onClick={handleSaveFavorite}
+              className="flex items-center justify-center gap-1.5 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl px-3 py-2.5 font-semibold transition-colors"
+              title="Save to favorites"
+            >
+              <Star size={16} />
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -66,6 +66,28 @@ export interface ValidationResult {
   enriched_prompt: string | null
 }
 
+export interface FavoriteFood {
+  id: string
+  user_id: string
+  name: string
+  calories: number
+  protein: number | null
+  carbs: number | null
+  fat: number | null
+  fiber: number | null
+  use_count: number
+  created_at: string
+}
+
+export interface FavoriteActivity {
+  id: string
+  user_id: string
+  description: string
+  calories_burned: number
+  use_count: number
+  created_at: string
+}
+
 export interface DailyStats {
   totalCalories: number
   totalProtein: number

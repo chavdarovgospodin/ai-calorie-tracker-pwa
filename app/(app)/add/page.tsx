@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useRef, Suspense } from 'react'
+import { useState, useRef, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Camera, FileText, Sparkles, CheckCircle, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Camera, FileText, Sparkles, CheckCircle, AlertCircle, Star, Trash2 as TrashIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import type { FoodAnalysis } from '@/lib/types'
+import type { FoodAnalysis, FavoriteFood } from '@/lib/types'
 
 type AnalysisPhase = 'idle' | 'validating' | 'analyzing' | 'done' | 'error'
 
@@ -40,6 +40,53 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
   )
 }
 
+function FavoriteFoodRow({
+  fav,
+  onLog,
+  onDelete,
+}: {
+  fav: FavoriteFood
+  onLog: (fav: FavoriteFood) => void
+  onDelete: (id: string) => void
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      setTimeout(() => setConfirmDelete(false), 3000)
+      return
+    }
+    onDelete(fav.id)
+  }
+
+  return (
+    <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl px-3 py-2.5 flex items-center gap-2">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-[#F8FAFC] truncate">{fav.name}</p>
+        <p className="text-xs text-[#64748B]">{fav.calories} kcal</p>
+      </div>
+      <button
+        onClick={() => onLog(fav)}
+        className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-600/10 hover:bg-indigo-600/20 px-2.5 py-1 rounded-lg transition-colors"
+      >
+        + Log
+      </button>
+      <button
+        onClick={handleDelete}
+        className={`text-xs font-semibold rounded-lg px-2 py-1 transition-colors ${
+          confirmDelete
+            ? 'bg-red-500 text-white'
+            : 'text-[#64748B] hover:text-red-400'
+        }`}
+      >
+        {confirmDelete ? '?' : <TrashIcon size={13} />}
+      </button>
+    </div>
+  )
+}
+
 export default function AddFoodPage() {
   return (
     <Suspense fallback={<div className="p-4"><div className="h-12 bg-[#111118] rounded-xl animate-pulse" /></div>}>
@@ -63,7 +110,24 @@ function AddFood() {
   const [validationError, setValidationError] = useState<string | null>(null)
   const [result, setResult] = useState<FoodAnalysis | null>(null)
   const [saving, setSaving] = useState(false)
+  const [favorites, setFavorites] = useState<FavoriteFood[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    async function loadFavorites() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('favorite_foods')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('use_count', { ascending: false })
+        .limit(10)
+      if (data) setFavorites(data)
+    }
+    loadFavorites()
+  }, [])
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -143,6 +207,86 @@ function AddFood() {
     }
   }
 
+  async function handleSaveFavorite() {
+    if (!result) return
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const existing = favorites.find(
+      (f) => f.name.toLowerCase() === result.name.toLowerCase()
+    )
+    if (existing) {
+      toast.info('Already in favorites')
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('favorite_foods')
+      .insert({
+        user_id: user.id,
+        name: result.name,
+        calories: result.calories,
+        protein: result.protein,
+        carbs: result.carbs,
+        fat: result.fat,
+        fiber: result.fiber,
+        use_count: 1,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      toast.error('Failed to save favorite')
+    } else {
+      setFavorites((prev) => [data, ...prev])
+      toast.success('Saved to favorites!')
+    }
+  }
+
+  async function handleLogFavorite(fav: FavoriteFood) {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { error } = await supabase.from('food_entries').insert({
+      user_id: user.id,
+      date,
+      name: fav.name,
+      calories: fav.calories,
+      protein: fav.protein,
+      carbs: fav.carbs,
+      fat: fav.fat,
+      fiber: fav.fiber,
+      quantity: null,
+      notes: null,
+      ai_confidence: null,
+    })
+
+    if (error) {
+      toast.error('Failed to log food')
+      return
+    }
+
+    await supabase
+      .from('favorite_foods')
+      .update({ use_count: fav.use_count + 1 })
+      .eq('id', fav.id)
+
+    toast.success(`${fav.name} logged!`)
+    router.push(`/?date=${date}`)
+  }
+
+  async function handleDeleteFavorite(id: string) {
+    const supabase = createClient()
+    const { error } = await supabase.from('favorite_foods').delete().eq('id', id)
+    if (error) {
+      toast.error('Failed to remove favorite')
+    } else {
+      setFavorites((prev) => prev.filter((f) => f.id !== id))
+    }
+  }
+
   async function handleSave() {
     if (!result) return
     setSaving(true)
@@ -189,6 +333,23 @@ function AddFood() {
         </button>
         <h1 className="text-lg font-bold text-[#F8FAFC]">Add Food</h1>
       </div>
+
+      {/* Favorites */}
+      {favorites.length > 0 && (
+        <div className="mb-5">
+          <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Quick Add</p>
+          <div className="space-y-2">
+            {favorites.map((fav) => (
+              <FavoriteFoodRow
+                key={fav.id}
+                fav={fav}
+                onLog={handleLogFavorite}
+                onDelete={handleDeleteFavorite}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex bg-[#111118] border border-[#1E1E2E] rounded-xl p-1 mb-5">
@@ -403,18 +564,27 @@ function AddFood() {
           {result.fiber > 0 && (
             <p className="text-xs text-[#64748B] mt-2 text-center">Fiber: {result.fiber}g</p>
           )}
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full mt-4 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50"
-          >
-            {saving ? (
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <CheckCircle size={16} />
-            )}
-            Save to diary
-          </button>
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50"
+            >
+              {saving ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <CheckCircle size={16} />
+              )}
+              Save to diary
+            </button>
+            <button
+              onClick={handleSaveFavorite}
+              className="flex items-center justify-center gap-1.5 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl px-3 py-2.5 font-semibold transition-colors"
+              title="Save to favorites"
+            >
+              <Star size={16} />
+            </button>
+          </div>
         </div>
       )}
     </div>
