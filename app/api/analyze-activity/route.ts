@@ -44,6 +44,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'enrichedPrompt is required' }, { status: 400 })
     }
 
+    const MAX_ENRICHED_LENGTH = 2000
+    if (enrichedPrompt.length > MAX_ENRICHED_LENGTH) {
+      return NextResponse.json({ error: 'Prompt too long' }, { status: 400 })
+    }
+
     const weightKg =
       typeof rawWeight === 'number' &&
       isFinite(rawWeight) &&
@@ -72,7 +77,13 @@ Return ONLY valid JSON, no markdown:
 
 confidence reflects how certain you are (1.0 = clear activity with duration and intensity, 0.5 = estimated duration or intensity)`
 
-    const result = await model.generateContent(prompt)
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Gemini timeout')), 20000)
+    )
+    const result = await Promise.race([
+      model.generateContent(prompt),
+      timeoutPromise,
+    ])
     const text = result.response.text().trim()
     const jsonStr = text.replace(/```json\n?|\n?```/g, '').trim()
     const parsed = ActivitySchema.parse(JSON.parse(jsonStr))

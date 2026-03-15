@@ -14,7 +14,7 @@ const FoodSchema = z.object({
   confidence: z.number().min(0).max(1),
 })
 
-const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+const MAX_BASE64_LENGTH = Math.ceil(5 * 1024 * 1024 * 4 / 3)
 
 export async function POST(request: Request) {
   try {
@@ -42,17 +42,23 @@ export async function POST(request: Request) {
 
     // 2. Input validation
     const body = await request.json()
-    const { enrichedPrompt, imageBase64 } = body
+    const { enrichedPrompt, imageBase64, mimeType: rawMimeType } = body
+    const mimeType = typeof rawMimeType === 'string' && rawMimeType.startsWith('image/') ? rawMimeType : 'image/jpeg'
 
     if (!enrichedPrompt || typeof enrichedPrompt !== 'string') {
       return NextResponse.json({ error: 'enrichedPrompt is required' }, { status: 400 })
+    }
+
+    const MAX_ENRICHED_LENGTH = 2000
+    if (enrichedPrompt.length > MAX_ENRICHED_LENGTH) {
+      return NextResponse.json({ error: 'Prompt too long' }, { status: 400 })
     }
 
     if (imageBase64) {
       if (typeof imageBase64 !== 'string') {
         return NextResponse.json({ error: 'Invalid image' }, { status: 400 })
       }
-      if (imageBase64.length > MAX_IMAGE_SIZE_BYTES) {
+      if (imageBase64.length > MAX_BASE64_LENGTH) {
         return NextResponse.json({ error: 'Image too large (max 5MB)' }, { status: 400 })
       }
     }
@@ -73,14 +79,23 @@ Return ONLY valid JSON, no markdown:
 
 confidence reflects how certain you are about the nutritional values (1.0 = exact data available, 0.5 = rough estimate)`
 
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Gemini timeout')), 20000)
+    )
     let result
     if (imageBase64) {
-      result = await model.generateContent([
-        prompt,
-        { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
+      result = await Promise.race([
+        model.generateContent([
+          prompt,
+          { inlineData: { mimeType: mimeType, data: imageBase64 } },
+        ]),
+        timeoutPromise,
       ])
     } else {
-      result = await model.generateContent(prompt)
+      result = await Promise.race([
+        model.generateContent(prompt),
+        timeoutPromise,
+      ])
     }
 
     const text = result.response.text().trim()

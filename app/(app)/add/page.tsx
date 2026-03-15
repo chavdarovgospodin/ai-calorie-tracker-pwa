@@ -106,6 +106,11 @@ function AddFood() {
   const [notes, setNotes] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview)
+    }
+  }, [imagePreview])
   const [phase, setPhase] = useState<AnalysisPhase>('idle')
   const [validationError, setValidationError] = useState<string | null>(null)
   const [result, setResult] = useState<FoodAnalysis | null>(null)
@@ -155,11 +160,16 @@ function AddFood() {
     setResult(null)
 
     try {
+      // Compute base64 once before validate
+      let cachedBase64: string | null = null
+      if (tab === 'photo' && imageFile) {
+        cachedBase64 = await toBase64(imageFile)
+      }
+
       // Build body for validation
       let body: Record<string, string>
-      if (tab === 'photo' && imageFile) {
-        const base64 = await toBase64(imageFile)
-        body = { imageBase64: base64, description }
+      if (tab === 'photo' && cachedBase64) {
+        body = { imageBase64: cachedBase64, mimeType: imageFile!.type, description }
       } else {
         body = { text }
       }
@@ -185,9 +195,9 @@ function AddFood() {
       const analyzeBody: Record<string, string> = {
         enrichedPrompt: validation.enriched_prompt,
       }
-      if (tab === 'photo' && imageFile) {
-        const base64 = await toBase64(imageFile)
-        analyzeBody.imageBase64 = base64
+      if (tab === 'photo' && cachedBase64) {
+        analyzeBody.imageBase64 = cachedBase64
+        analyzeBody.mimeType = imageFile!.type
       }
 
       const analyzeRes = await fetch('/api/analyze-food', {

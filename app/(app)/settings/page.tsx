@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { LogOut, Save } from 'lucide-react'
 import { toast } from 'sonner'
@@ -23,7 +23,7 @@ export default function SettingsPage() {
   const [goal, setGoal] = useState<UserProfile['goal']>('maintain')
   const [activityLevel, setActivityLevel] = useState<UserProfile['activity_level']>('moderately_active')
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     async function loadProfile() {

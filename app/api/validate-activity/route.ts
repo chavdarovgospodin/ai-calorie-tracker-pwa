@@ -76,7 +76,13 @@ If INVALID, write a friendly reason in the same language as the user's input exp
 Return ONLY valid JSON, no markdown:
 {"valid": boolean, "reason": string | null, "enriched_prompt": string | null}`
 
-    const result = await model.generateContent(prompt)
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Gemini timeout')), 20000)
+    )
+    const result = await Promise.race([
+      model.generateContent(prompt),
+      timeoutPromise,
+    ])
     const text = result.response.text().trim()
     const jsonStr = text.replace(/```json\n?|\n?```/g, '').trim()
     const parsed = ValidatorSchema.parse(JSON.parse(jsonStr))

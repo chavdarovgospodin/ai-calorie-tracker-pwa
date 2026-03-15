@@ -11,7 +11,7 @@ const ValidatorSchema = z.object({
 })
 
 const MAX_TEXT_LENGTH = 500
-const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+const MAX_BASE64_LENGTH = Math.ceil(5 * 1024 * 1024 * 4 / 3)
 
 export async function POST(request: Request) {
   try {
@@ -46,10 +46,12 @@ export async function POST(request: Request) {
       if (typeof body.imageBase64 !== 'string') {
         return NextResponse.json({ error: 'Invalid image' }, { status: 400 })
       }
-      if (body.imageBase64.length > MAX_IMAGE_SIZE_BYTES) {
+      if (body.imageBase64.length > MAX_BASE64_LENGTH) {
         return NextResponse.json({ error: 'Image too large (max 5MB)' }, { status: 400 })
       }
     }
+    const mimeType = typeof body.mimeType === 'string' && body.mimeType.startsWith('image/') ? body.mimeType : 'image/jpeg'
+
     if (!body.text && !body.imageBase64) {
       return NextResponse.json({ error: 'Text or image is required' }, { status: 400 })
     }
@@ -112,14 +114,23 @@ Return ONLY valid JSON, no markdown:
 
     const prompt = body.imageBase64 ? imagePrompt : textPrompt
 
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Gemini timeout')), 20000)
+    )
     let result
     if (body.imageBase64) {
-      result = await model.generateContent([
-        prompt,
-        { inlineData: { mimeType: 'image/jpeg', data: body.imageBase64 } },
+      result = await Promise.race([
+        model.generateContent([
+          prompt,
+          { inlineData: { mimeType: mimeType, data: body.imageBase64 } },
+        ]),
+        timeoutPromise,
       ])
     } else {
-      result = await model.generateContent(prompt)
+      result = await Promise.race([
+        model.generateContent(prompt),
+        timeoutPromise,
+      ])
     }
 
     const text = result.response.text().trim()

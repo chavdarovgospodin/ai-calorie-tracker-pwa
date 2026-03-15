@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Zap } from 'lucide-react'
 import { toast } from 'sonner'
@@ -31,7 +31,7 @@ function Dashboard() {
   const [userEmail, setUserEmail] = useState('')
   const [loading, setLoading] = useState(true)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const loadData = useCallback(async () => {
     setLoading(true)
