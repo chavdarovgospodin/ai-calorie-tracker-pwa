@@ -12,6 +12,7 @@ export default function EditFoodPage({ params }: { params: Promise<{ id: string 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const [name, setName] = useState('')
   const [calories, setCalories] = useState('')
@@ -82,7 +83,12 @@ export default function EditFoodPage({ params }: { params: Promise<{ id: string 
   }
 
   async function handleDelete() {
-    if (!confirm('Delete this entry?')) return
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      setTimeout(() => setConfirmDelete(false), 4000)
+      return
+    }
+    setConfirmDelete(false)
     setDeleting(true)
     const { error } = await supabase.from('food_entries').delete().eq('id', id)
     if (error) {
@@ -123,9 +129,13 @@ export default function EditFoodPage({ params }: { params: Promise<{ id: string 
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="p-2 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors"
+          className={`p-2 rounded-xl transition-colors ${
+            confirmDelete
+              ? 'bg-red-500 text-white px-3 text-xs font-semibold'
+              : 'text-red-400 hover:bg-red-500/10'
+          }`}
         >
-          <Trash2 size={18} />
+          {confirmDelete ? 'Tap again to confirm' : <Trash2 size={18} />}
         </button>
       </div>
 
