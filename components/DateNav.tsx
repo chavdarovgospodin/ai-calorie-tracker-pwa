@@ -8,14 +8,13 @@ interface DateNavProps {
 }
 
 function formatDate(dateStr: string): string {
-  const today = new Date()
-  const todayStr = today.toISOString().split('T')[0]
-  const yesterday = new Date(today)
-  yesterday.setDate(today.getDate() - 1)
-  const yesterdayStr = yesterday.toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA')
+  const yesterdayDate = new Date()
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1)
+  const yesterday = yesterdayDate.toLocaleDateString('en-CA')
 
-  if (dateStr === todayStr) return 'Today'
-  if (dateStr === yesterdayStr) return 'Yesterday'
+  if (dateStr === today) return 'Today'
+  if (dateStr === yesterday) return 'Yesterday'
 
   const date = new Date(dateStr + 'T00:00:00')
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
@@ -24,18 +23,27 @@ function formatDate(dateStr: string): string {
 function addDays(dateStr: string, days: number): string {
   const date = new Date(dateStr + 'T00:00:00')
   date.setDate(date.getDate() + days)
-  return date.toISOString().split('T')[0]
+  return date.toLocaleDateString('en-CA')
 }
 
 export default function DateNav({ date, onChange }: DateNavProps) {
   const today = new Date().toLocaleDateString('en-CA')
+
+  const minDate = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 90)
+    return d.toLocaleDateString('en-CA')
+  })()
+
   const isToday = date === today
+  const isMinDate = date <= minDate
 
   return (
     <div className="flex items-center gap-2">
       <button
         onClick={() => onChange(addDays(date, -1))}
-        className="p-2 rounded-xl text-[#64748B] hover:text-[#F8FAFC] hover:bg-[#1A1A24] transition-colors"
+        disabled={isMinDate}
+        className="p-2 rounded-xl text-[#64748B] hover:text-[#F8FAFC] hover:bg-[#1A1A24] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
       >
         <ChevronLeft size={18} />
       </button>
