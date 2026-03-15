@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F0F1A"/>
+      <stop offset="100%" stop-color="#1A1A2E"/>
+    </linearGradient>
+    <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#818CF8"/>
+    </linearGradient>
+    <linearGradient id="sparkGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#A5B4FC"/>
+      <stop offset="100%" stop-color="#6366F1"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background rounded rect -->
+  <rect width="512" height="512" rx="110" fill="url(#bgGrad)"/>
+
+  <!-- Outer track ring -->
+  <circle cx="256" cy="256" r="155" stroke="#1E1E2E" stroke-width="28" fill="none"/>
+
+  <!-- Progress arc ~270deg (open at bottom-right) with glow -->
+  <circle
+    cx="256" cy="256" r="155"
+    stroke="url(#ringGrad)"
+    stroke-width="28"
+    fill="none"
+    stroke-linecap="round"
+    stroke-dasharray="735 239"
+    stroke-dashoffset="194"
+    filter="url(#glow)"
+    transform="rotate(-90 256 256)"
+  />
+
+  <!-- Inner subtle ring -->
+  <circle cx="256" cy="256" r="108" stroke="#1E1E2E" stroke-width="1.5" fill="none" opacity="0.6"/>
+
+  <!-- Letter C in center -->
+  <text
+    x="256" y="295"
+    text-anchor="middle"
+    font-family="'Inter', 'SF Pro Display', system-ui, sans-serif"
+    font-size="148"
+    font-weight="800"
+    letter-spacing="-6"
+    fill="url(#sparkGrad)"
+    filter="url(#glow)"
+  >C</text>
+
+  <!-- Dot at arc end (top of ring) -->
+  <circle cx="256" cy="101" r="14" fill="#818CF8" filter="url(#glow)"/>
+</svg>
