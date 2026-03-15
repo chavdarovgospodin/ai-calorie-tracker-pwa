@@ -23,7 +23,7 @@ export default function DashboardPage() {
 function Dashboard() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA')
   const [date, setDate] = useState(searchParams.get('date') ?? today)
   const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([])
   const [activityEntries, setActivityEntries] = useState<ActivityEntry[]>([])

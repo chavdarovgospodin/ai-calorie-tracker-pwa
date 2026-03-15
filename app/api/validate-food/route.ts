@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 
 Analyze this input and determine if it describes food, a meal, a drink, or ingredients that can be nutritionally analyzed.
 
-User input: "${body.text}"
+User input: <food_input>${body.text}</food_input>
 
 Rules:
 - Valid: any food, meal, drink, ingredient, or combination (even if vague quantities)

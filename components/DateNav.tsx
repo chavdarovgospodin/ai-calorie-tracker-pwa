@@ -28,7 +28,7 @@ function addDays(dateStr: string, days: number): string {
 }
 
 export default function DateNav({ date, onChange }: DateNavProps) {
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA')
   const isToday = date === today
 
   return (

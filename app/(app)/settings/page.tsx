@@ -67,15 +67,30 @@ export default function SettingsPage() {
       toast.error('Please fill in all fields')
       return
     }
+    const ageNum = Number(age)
+    const weightNum = Number(weight)
+    const heightNum = Number(height)
+    if (ageNum < 10 || ageNum > 120) {
+      toast.error('Age must be between 10 and 120')
+      return
+    }
+    if (weightNum < 20 || weightNum > 300) {
+      toast.error('Weight must be between 20 and 300 kg')
+      return
+    }
+    if (heightNum < 100 || heightNum > 250) {
+      toast.error('Height must be between 100 and 250 cm')
+      return
+    }
     setSaving(true)
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
     const profileData: ProfileFields = {
-      age: Number(age),
-      weight: Number(weight),
-      height: Number(height),
+      age: ageNum,
+      weight: weightNum,
+      height: heightNum,
       gender,
       goal,
       activity_level: activityLevel,

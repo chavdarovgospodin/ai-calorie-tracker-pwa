@@ -98,7 +98,7 @@ export default function AddFoodPage() {
 function AddFood() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const date = searchParams.get('date') ?? new Date().toISOString().split('T')[0]
+  const date = searchParams.get('date') ?? new Date().toLocaleDateString('en-CA')
   const [tab, setTab] = useState<'text' | 'photo'>('text')
   const [text, setText] = useState('')
   const [description, setDescription] = useState('')

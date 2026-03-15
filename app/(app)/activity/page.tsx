@@ -33,10 +33,12 @@ function FavoriteActivityRow({
   fav,
   onLog,
   onDelete,
+  isLogging,
 }: {
   fav: FavoriteActivity
   onLog: (fav: FavoriteActivity) => void
   onDelete: (id: string) => void
+  isLogging: boolean
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -58,7 +60,8 @@ function FavoriteActivityRow({
       </div>
       <button
         onClick={() => onLog(fav)}
-        className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-600/10 hover:bg-indigo-600/20 px-2.5 py-1 rounded-lg transition-colors"
+        disabled={isLogging}
+        className={`text-xs font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-600/10 hover:bg-indigo-600/20 px-2.5 py-1 rounded-lg transition-colors${isLogging ? ' opacity-50' : ''}`}
       >
         + Log
       </button>
@@ -87,7 +90,7 @@ export default function AddActivityPage() {
 function AddActivity() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const date = searchParams.get('date') ?? new Date().toISOString().split('T')[0]
+  const date = searchParams.get('date') ?? new Date().toLocaleDateString('en-CA')
   const [description, setDescription] = useState('')
   const [notes, setNotes] = useState('')
   const [phase, setPhase] = useState<'idle' | 'validating' | 'analyzing' | 'done' | 'error'>('idle')
@@ -95,12 +98,22 @@ function AddActivity() {
   const [result, setResult] = useState<ActivityAnalysis | null>(null)
   const [saving, setSaving] = useState(false)
   const [favorites, setFavorites] = useState<FavoriteActivity[]>([])
+  const [weightKg, setWeightKg] = useState(70)
+  const [loggingFavoriteId, setLoggingFavoriteId] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadFavorites() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('weight')
+        .eq('user_id', user.id)
+        .single()
+      if (profile?.weight) setWeightKg(profile.weight)
+
       const { data } = await supabase
         .from('favorite_activities')
         .select('*')
@@ -172,9 +185,10 @@ function AddActivity() {
   }
 
   async function handleLogFavorite(fav: FavoriteActivity) {
+    setLoggingFavoriteId(fav.id)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) { setLoggingFavoriteId(null); return }
 
     const { error } = await supabase.from('activity_entries').insert({
       user_id: user.id,
@@ -187,6 +201,7 @@ function AddActivity() {
 
     if (error) {
       toast.error('Failed to log activity')
+      setLoggingFavoriteId(null)
       return
     }
 
@@ -237,18 +252,6 @@ function AddActivity() {
 
       // Step 2: Analyze with enriched_prompt
       setPhase('analyzing')
-
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      let weightKg = 70
-      if (user) {
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('weight')
-          .eq('user_id', user.id)
-          .single()
-        if (profile?.weight) weightKg = profile.weight
-      }
 
       const analyzeRes = await fetch('/api/analyze-activity', {
         method: 'POST',
@@ -320,6 +323,7 @@ function AddActivity() {
                 fav={fav}
                 onLog={handleLogFavorite}
                 onDelete={handleDeleteFavorite}
+                isLogging={loggingFavoriteId === fav.id}
               />
             ))}
           </div>

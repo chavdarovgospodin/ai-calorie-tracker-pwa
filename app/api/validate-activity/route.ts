@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 
 Analyze this input and determine if it describes a physical activity, exercise, movement, or sport that can have calories burned estimated.
 
-User input: "${body.text}"
+User input: <activity_input>${body.text}</activity_input>
 
 Rules:
 - Valid: any exercise, sport, physical activity, movement (running, walking, cycling, swimming, gym, yoga, dancing, hiking, cleaning, gardening, etc.)
