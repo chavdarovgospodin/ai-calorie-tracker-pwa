@@ -154,9 +154,10 @@ export default function HistoryPage() {
       ) : (
         <div className="space-y-2">
           {days.map((day) => {
-            const diff = day.calories - target
+            const dayTarget = (profile?.daily_calorie_target ?? 2000) + day.burned
+            const diff = day.calories - dayTarget
             const isOver = diff > 0
-            const pct = target > 0 ? Math.round((day.calories / target) * 100) : 0
+            const pct = dayTarget > 0 ? Math.round((day.calories / dayTarget) * 100) : 0
 
             return (
               <button

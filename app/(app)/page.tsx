@@ -122,7 +122,7 @@ function Dashboard() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-[#F8FAFC]">Today&apos;s Food</h2>
           <button
-            onClick={() => router.push('/add')}
+            onClick={() => router.push(`/add?date=${date}`)}
             className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors"
           >
             <Plus size={14} />
@@ -139,7 +139,7 @@ function Dashboard() {
           <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-6 text-center">
             <p className="text-[#64748B] text-sm">No food logged yet</p>
             <button
-              onClick={() => router.push('/add')}
+              onClick={() => router.push(`/add?date=${date}`)}
               className="mt-3 text-indigo-400 hover:text-indigo-300 text-sm font-medium"
             >
               + Add your first meal

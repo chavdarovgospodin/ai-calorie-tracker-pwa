@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useRef, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Camera, FileText, Sparkles, CheckCircle, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -30,7 +30,17 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
 }
 
 export default function AddFoodPage() {
+  return (
+    <Suspense fallback={<div className="p-4"><div className="h-12 bg-[#111118] rounded-xl animate-pulse" /></div>}>
+      <AddFood />
+    </Suspense>
+  )
+}
+
+function AddFood() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const date = searchParams.get('date') ?? new Date().toISOString().split('T')[0]
   const [tab, setTab] = useState<'text' | 'photo'>('text')
   const [text, setText] = useState('')
   const [description, setDescription] = useState('')
@@ -109,11 +119,9 @@ export default function AddFoodPage() {
       return
     }
 
-    const today = new Date().toISOString().split('T')[0]
-
     const { error } = await supabase.from('food_entries').insert({
       user_id: user.id,
-      date: today,
+      date,
       name: result.name,
       calories: result.calories,
       protein: result.protein,
