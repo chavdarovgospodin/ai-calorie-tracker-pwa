@@ -90,7 +90,7 @@ Return ONLY valid JSON, no markdown:
 
 Analyze this image and determine if it shows food, a meal, a drink, ingredients, a food menu, or food packaging that can be nutritionally analyzed.
 
-${description ? `User also provided this description: "${description}"` : ''}
+${description ? `User also provided this description: <description>${description}</description>` : ''}
 
 Rules:
 - Valid: any food, meal, drink, ingredients visible in the image

@@ -1,6 +1,6 @@
 -- Enable RLS on all tables
 
-CREATE TABLE user_profiles (
+CREATE TABLE IF NOT EXISTS user_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
   age INTEGER NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE user_profiles (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE food_entries (
+CREATE TABLE IF NOT EXISTS food_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   date DATE NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE food_entries (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE activity_entries (
+CREATE TABLE IF NOT EXISTS activity_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   date DATE NOT NULL,
@@ -53,10 +53,10 @@ CREATE POLICY "Users own their profile" ON user_profiles FOR ALL USING (auth.uid
 CREATE POLICY "Users own their food entries" ON food_entries FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users own their activity entries" ON activity_entries FOR ALL USING (auth.uid() = user_id);
 
-CREATE INDEX idx_food_entries_user_date ON food_entries(user_id, date);
-CREATE INDEX idx_activity_entries_user_date ON activity_entries(user_id, date);
+CREATE INDEX IF NOT EXISTS idx_food_entries_user_date ON food_entries(user_id, date);
+CREATE INDEX IF NOT EXISTS idx_activity_entries_user_date ON activity_entries(user_id, date);
 
-CREATE TABLE favorite_foods (
+CREATE TABLE IF NOT EXISTS favorite_foods (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
@@ -69,7 +69,7 @@ CREATE TABLE favorite_foods (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE favorite_activities (
+CREATE TABLE IF NOT EXISTS favorite_activities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   description TEXT NOT NULL,
@@ -84,8 +84,8 @@ ALTER TABLE favorite_activities ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users own their favorite foods" ON favorite_foods FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users own their favorite activities" ON favorite_activities FOR ALL USING (auth.uid() = user_id);
 
-CREATE INDEX idx_favorite_foods_user ON favorite_foods(user_id);
-CREATE INDEX idx_favorite_activities_user ON favorite_activities(user_id);
+CREATE INDEX IF NOT EXISTS idx_favorite_foods_user ON favorite_foods(user_id);
+CREATE INDEX IF NOT EXISTS idx_favorite_activities_user ON favorite_activities(user_id);
 
 -- =============================================
 -- updated_at auto-update triggers

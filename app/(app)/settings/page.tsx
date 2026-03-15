@@ -51,16 +51,23 @@ export default function SettingsPage() {
     loadProfile()
   }, [router, supabase])
 
-  const caloriePreview = age && weight && height
-    ? calculateFromProfile({
-        age: Number(age),
-        weight: Number(weight),
-        height: Number(height),
-        gender,
-        goal,
-        activity_level: activityLevel,
-      } as ProfileFields)
-    : null
+  const ageNum = Number(age)
+  const weightNum = Number(weight)
+  const heightNum = Number(height)
+  const caloriePreview =
+    age && weight && height &&
+    ageNum >= 10 && ageNum <= 120 &&
+    weightNum >= 20 && weightNum <= 300 &&
+    heightNum >= 100 && heightNum <= 250
+      ? calculateFromProfile({
+          age: ageNum,
+          weight: weightNum,
+          height: heightNum,
+          gender,
+          goal,
+          activity_level: activityLevel,
+        } as ProfileFields)
+      : null
 
   async function handleSave() {
     if (!age || !weight || !height) {

@@ -44,10 +44,12 @@ function FavoriteFoodRow({
   fav,
   onLog,
   onDelete,
+  isLogging,
 }: {
   fav: FavoriteFood
   onLog: (fav: FavoriteFood) => void
   onDelete: (id: string) => void
+  isLogging: boolean
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -69,7 +71,8 @@ function FavoriteFoodRow({
       </div>
       <button
         onClick={() => onLog(fav)}
-        className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-600/10 hover:bg-indigo-600/20 px-2.5 py-1 rounded-lg transition-colors"
+        disabled={isLogging}
+        className={`text-xs font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-600/10 hover:bg-indigo-600/20 px-2.5 py-1 rounded-lg transition-colors${isLogging ? ' opacity-50' : ''}`}
       >
         + Log
       </button>
@@ -116,6 +119,7 @@ function AddFood() {
   const [result, setResult] = useState<FoodAnalysis | null>(null)
   const [saving, setSaving] = useState(false)
   const [favorites, setFavorites] = useState<FavoriteFood[]>([])
+  const [loggingFavoriteId, setLoggingFavoriteId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -288,9 +292,10 @@ function AddFood() {
   }
 
   async function handleLogFavorite(fav: FavoriteFood) {
+    setLoggingFavoriteId(fav.id)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) { setLoggingFavoriteId(null); return }
 
     const { error } = await supabase.from('food_entries').insert({
       user_id: user.id,
@@ -308,6 +313,7 @@ function AddFood() {
 
     if (error) {
       toast.error('Failed to log food')
+      setLoggingFavoriteId(null)
       return
     }
 
@@ -388,6 +394,7 @@ function AddFood() {
                 fav={fav}
                 onLog={handleLogFavorite}
                 onDelete={handleDeleteFavorite}
+                isLogging={loggingFavoriteId === fav.id}
               />
             ))}
           </div>
