@@ -1,28 +1,26 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { MoreVertical, Pencil, Trash2, Flame } from 'lucide-react'
+import { useState } from 'react'
+import { Trash2, Flame } from 'lucide-react'
 import type { ActivityEntry } from '@/lib/types'
 
 interface ActivityCardProps {
   entry: ActivityEntry
   onDelete: (id: string) => void
-  onEdit: (id: string) => void
 }
 
-export default function ActivityCard({ entry, onDelete, onEdit }: ActivityCardProps) {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
+export default function ActivityCard({ entry, onDelete }: ActivityCardProps) {
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false)
-      }
+  function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      setTimeout(() => setConfirmDelete(false), 4000)
+      return
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    onDelete(entry.id)
+  }
 
   return (
     <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-4 flex items-center justify-between gap-3">
@@ -39,32 +37,16 @@ export default function ActivityCard({ entry, onDelete, onEdit }: ActivityCardPr
 
       <div className="flex items-center gap-2 shrink-0">
         <span className="text-xl font-bold tabular-nums text-amber-400">{entry.calories_burned}</span>
-        <div className="relative" ref={menuRef}>
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="p-1.5 rounded-lg text-[#64748B] hover:text-[#F8FAFC] hover:bg-[#1A1A24] transition-colors"
-          >
-            <MoreVertical size={16} />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-36 bg-[#1A1A24] border border-[#1E1E2E] rounded-xl shadow-xl z-10 overflow-hidden">
-              <button
-                onClick={() => { setMenuOpen(false); onEdit(entry.id) }}
-                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-[#F8FAFC] hover:bg-[#2A2A3E] transition-colors"
-              >
-                <Pencil size={14} />
-                Edit
-              </button>
-              <button
-                onClick={() => { setMenuOpen(false); onDelete(entry.id) }}
-                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-              >
-                <Trash2 size={14} />
-                Delete
-              </button>
-            </div>
-          )}
-        </div>
+        <button
+          onClick={handleDelete}
+          className={`flex-shrink-0 transition-all duration-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold ${
+            confirmDelete
+              ? 'bg-red-500 text-white'
+              : 'text-[#64748B] hover:text-red-400 hover:bg-red-500/10'
+          }`}
+        >
+          {confirmDelete ? 'Confirm?' : <Trash2 size={15} />}
+        </button>
       </div>
     </div>
   )

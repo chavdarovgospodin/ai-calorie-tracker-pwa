@@ -11,7 +11,6 @@ const ActivitySchema = z.object({
   confidence: z.number().min(0).max(1),
 })
 
-const MAX_DESCRIPTION_LENGTH = 500
 
 export async function POST(request: Request) {
   try {
@@ -39,17 +38,12 @@ export async function POST(request: Request) {
 
     // 2. Input validation
     const body = await request.json()
-    const { description } = body
+    const { enrichedPrompt, weightKg: rawWeight } = body
 
-    if (!description || typeof description !== 'string' || description.trim().length === 0) {
-      return NextResponse.json({ error: 'Description is required' }, { status: 400 })
+    if (!enrichedPrompt || typeof enrichedPrompt !== 'string') {
+      return NextResponse.json({ error: 'enrichedPrompt is required' }, { status: 400 })
     }
 
-    if (description.length > MAX_DESCRIPTION_LENGTH) {
-      return NextResponse.json({ error: 'Description too long' }, { status: 400 })
-    }
-
-    const rawWeight = body.weightKg
     const weightKg =
       typeof rawWeight === 'number' &&
       isFinite(rawWeight) &&
@@ -62,15 +56,21 @@ export async function POST(request: Request) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
-    const prompt = `Analyze this workout/activity and estimate calories burned. Return ONLY valid JSON (no markdown, no code blocks).
+    const prompt = `You are a precise physical activity analyzer for a calorie tracking app.
 
-Activity description: ${description.trim()}
+${enrichedPrompt}
+
 User weight: ${weightKg}kg
 
-Consider the user's weight when calculating calorie burn. Be realistic with estimates.
+Based on the above activity description, estimate calories burned.
+Use MET (Metabolic Equivalent of Task) values for accuracy.
+Consider the user's weight in all calculations.
+Be realistic — don't overestimate.
 
-Return exactly this JSON structure:
-{"activityName":"string","caloriesBurned":number,"durationMinutes":number,"confidence":0.0-1.0}`
+Return ONLY valid JSON, no markdown:
+{"activityName":"string","caloriesBurned":number,"durationMinutes":number,"confidence":0.0-1.0}
+
+confidence reflects how certain you are (1.0 = clear activity with duration and intensity, 0.5 = estimated duration or intensity)`
 
     const result = await model.generateContent(prompt)
     const text = result.response.text().trim()

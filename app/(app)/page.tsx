@@ -152,7 +152,6 @@ function Dashboard() {
                 key={entry.id}
                 entry={entry}
                 onDelete={handleDeleteFood}
-                onEdit={(id) => router.push(`/add/${id}`)}
               />
             ))}
           </div>
@@ -190,7 +189,6 @@ function Dashboard() {
                 key={entry.id}
                 entry={entry}
                 onDelete={handleDeleteActivity}
-                onEdit={(id) => router.push(`/activity/${id}`)}
               />
             ))}
           </div>
