@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, TrendingUp, Calendar } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { UserProfile } from '@/lib/types'
 
@@ -33,47 +34,69 @@ export default function HistoryPage() {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
-  const [days, setDays] = useState<DayData[]>([])
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+  const { data: user } = useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      return user
+    },
+  })
 
-    const { start, end } = getMonthRange(year, month)
+  const { data: profile } = useQuery<UserProfile | null>({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', user!.id)
+        .single()
+      return data
+    },
+    enabled: !!user,
+  })
 
-    const [profileRes, foodRes, activityRes] = await Promise.all([
-      supabase.from('user_profiles').select('*').eq('user_id', user.id).single(),
-      supabase.from('food_entries').select('date, calories').eq('user_id', user.id).gte('date', start).lte('date', end),
-      supabase.from('activity_entries').select('date, calories_burned').eq('user_id', user.id).gte('date', start).lte('date', end),
-    ])
+  const { data: earliestMonth } = useQuery<{ year: number; month: number } | null>({
+    queryKey: ['earliest_month', user?.id],
+    queryFn: async () => {
+      const [foodRes, activityRes] = await Promise.all([
+        supabase.from('food_entries').select('date').eq('user_id', user!.id).order('date', { ascending: true }).limit(1).maybeSingle(),
+        supabase.from('activity_entries').select('date').eq('user_id', user!.id).order('date', { ascending: true }).limit(1).maybeSingle(),
+      ])
+      const dates = [foodRes.data?.date, activityRes.data?.date].filter(Boolean) as string[]
+      if (dates.length === 0) return null
+      const earliest = dates.sort()[0]
+      const d = new Date(earliest + 'T00:00:00')
+      return { year: d.getFullYear(), month: d.getMonth() + 1 }
+    },
+    enabled: !!user,
+  })
 
-    if (profileRes.data) setProfile(profileRes.data)
-
-    // Group by date
-    const dayMap: Record<string, DayData> = {}
-
-    for (const entry of foodRes.data ?? []) {
-      if (!dayMap[entry.date]) dayMap[entry.date] = { date: entry.date, calories: 0, burned: 0 }
-      dayMap[entry.date].calories += entry.calories
-    }
-
-    for (const entry of activityRes.data ?? []) {
-      if (!dayMap[entry.date]) dayMap[entry.date] = { date: entry.date, calories: 0, burned: 0 }
-      dayMap[entry.date].burned += entry.calories_burned
-    }
-
-    setDays(Object.values(dayMap).sort((a, b) => b.date.localeCompare(a.date)))
-    setLoading(false)
-  }, [year, month, supabase])
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
+  const { data: days = [], isLoading } = useQuery<DayData[]>({
+    queryKey: ['history', year, month, user?.id],
+    queryFn: async () => {
+      const { start, end } = getMonthRange(year, month)
+      const [foodRes, activityRes] = await Promise.all([
+        supabase.from('food_entries').select('date, calories')
+          .eq('user_id', user!.id).gte('date', start).lte('date', end),
+        supabase.from('activity_entries').select('date, calories_burned')
+          .eq('user_id', user!.id).gte('date', start).lte('date', end),
+      ])
+      const dayMap: Record<string, DayData> = {}
+      for (const entry of foodRes.data ?? []) {
+        if (!dayMap[entry.date]) dayMap[entry.date] = { date: entry.date, calories: 0, burned: 0 }
+        dayMap[entry.date].calories += entry.calories
+      }
+      for (const entry of activityRes.data ?? []) {
+        if (!dayMap[entry.date]) dayMap[entry.date] = { date: entry.date, calories: 0, burned: 0 }
+        dayMap[entry.date].burned += entry.calories_burned
+      }
+      return Object.values(dayMap).sort((a, b) => b.date.localeCompare(a.date))
+    },
+    enabled: !!user,
+  })
 
   function prevMonth() {
     if (month === 1) { setMonth(12); setYear((y) => y - 1) }
@@ -88,6 +111,9 @@ export default function HistoryPage() {
   }
 
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1
+  const isEarliestMonth = earliestMonth
+    ? year === earliestMonth.year && month === earliestMonth.month
+    : false
   const target = profile?.daily_calorie_target ?? 2000
   const trackedDays = days.length
   const avgCalories = trackedDays > 0 ? Math.round(days.reduce((s, d) => s + d.calories, 0) / trackedDays) : 0
@@ -103,7 +129,8 @@ export default function HistoryPage() {
       <div className="flex items-center justify-between mb-5">
         <button
           onClick={prevMonth}
-          className="p-2 rounded-xl text-[#64748B] hover:text-[#F8FAFC] hover:bg-[#1A1A24] transition-colors"
+          disabled={isEarliestMonth}
+          className="p-2 rounded-xl text-[#64748B] hover:text-[#F8FAFC] hover:bg-[#1A1A24] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <ChevronLeft size={20} />
         </button>
@@ -125,7 +152,7 @@ export default function HistoryPage() {
               <TrendingUp size={14} className="text-indigo-400" />
               <span className="text-xs text-[#64748B]">Avg. Calories</span>
             </div>
-            <p className="text-2xl font-bold text-[#F8FAFC]">{loading ? '–' : avgCalories.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-[#F8FAFC]">{isLoading ? '–' : avgCalories.toLocaleString()}</p>
             <p className="text-xs text-[#64748B]">target {target.toLocaleString()} kcal</p>
           </div>
           <div>
@@ -133,14 +160,14 @@ export default function HistoryPage() {
               <Calendar size={14} className="text-indigo-400" />
               <span className="text-xs text-[#64748B]">Days Tracked</span>
             </div>
-            <p className="text-2xl font-bold text-[#F8FAFC]">{loading ? '–' : trackedDays}</p>
+            <p className="text-2xl font-bold text-[#F8FAFC]">{isLoading ? '–' : trackedDays}</p>
             <p className="text-xs text-[#64748B]">this month</p>
           </div>
         </div>
       </div>
 
       {/* Day list */}
-      {loading ? (
+      {isLoading ? (
         <div className="space-y-2">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-16 bg-[#111118] rounded-2xl animate-pulse" />

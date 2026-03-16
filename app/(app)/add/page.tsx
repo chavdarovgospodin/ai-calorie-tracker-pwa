@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect, Suspense } from 'react'
+import { useState, useRef, useEffect, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Camera, FileText, Sparkles, CheckCircle, AlertCircle, Star, Trash2 as TrashIcon } from 'lucide-react'
 import { toast } from 'sonner'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { FoodAnalysis, FavoriteFood } from '@/lib/types'
 
@@ -127,25 +128,33 @@ function AddFood() {
   const [validationError, setValidationError] = useState<string | null>(null)
   const [result, setResult] = useState<FoodAnalysis | null>(null)
   const [saving, setSaving] = useState(false)
-  const [favorites, setFavorites] = useState<FavoriteFood[]>([])
   const [loggingFavoriteId, setLoggingFavoriteId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    async function loadFavorites() {
-      const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
+  const queryClient = useQueryClient()
+
+  const { data: user } = useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      return user
+    },
+  })
+
+  const { data: favorites = [] } = useQuery<FavoriteFood[]>({
+    queryKey: ['favorite_foods', user?.id],
+    queryFn: async () => {
       const { data } = await supabase
         .from('favorite_foods')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', user!.id)
         .order('use_count', { ascending: false })
         .limit(10)
-      if (data) setFavorites(data)
-    }
-    loadFavorites()
-  }, [])
+      return data ?? []
+    },
+    enabled: !!user,
+  })
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -173,13 +182,11 @@ function AddFood() {
     setResult(null)
 
     try {
-      // Compute base64 once before validate
       let cachedBase64: string | null = null
       if (tab === 'photo' && imageFile) {
         cachedBase64 = await toBase64(imageFile)
       }
 
-      // Build body for validation
       let body: Record<string, string>
       if (tab === 'photo' && cachedBase64) {
         body = { imageBase64: cachedBase64, mimeType: imageFile!.type, description }
@@ -187,7 +194,6 @@ function AddFood() {
         body = { text }
       }
 
-      // Step 1: Validate
       const validateRes = await fetch('/api/validate-food', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -202,7 +208,6 @@ function AddFood() {
         return
       }
 
-      // Step 2: Analyze with enriched_prompt
       setPhase('analyzing')
 
       const analyzeBody: Record<string, string> = {
@@ -231,12 +236,8 @@ function AddFood() {
   }
 
   async function handleSaveFavorite() {
-    if (!result) return
+    if (!result || !user) return
     setSaving(true)
-
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setSaving(false); return }
 
     const { data: existing } = await supabase
       .from('favorite_foods')
@@ -261,18 +262,11 @@ function AddFood() {
       if (error) {
         toast.error('Failed to update favorite')
       } else {
-        setFavorites(prev =>
-          prev
-            .map(f => f.id === existing.id
-              ? { ...f, calories: result!.calories, protein: result!.protein, carbs: result!.carbs, fat: result!.fat, fiber: result!.fiber, use_count: existing.use_count + 1 }
-              : f
-            )
-            .sort((a, b) => b.use_count - a.use_count)
-        )
+        queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
         toast.success('Favorite updated ⭐')
       }
     } else {
-      const { data: newFav, error } = await supabase
+      const { error } = await supabase
         .from('favorite_foods')
         .insert({
           user_id: user.id,
@@ -284,15 +278,11 @@ function AddFood() {
           fiber: result.fiber,
           use_count: 1,
         })
-        .select()
-        .single()
 
       if (error) {
         toast.error('Failed to save favorite')
       } else {
-        setFavorites(prev =>
-          [newFav, ...prev].sort((a, b) => b.use_count - a.use_count)
-        )
+        queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
         toast.success('Added to favorites ⭐')
       }
     }
@@ -301,10 +291,8 @@ function AddFood() {
   }
 
   async function handleLogFavorite(fav: FavoriteFood) {
+    if (!user) return
     setLoggingFavoriteId(fav.id)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setLoggingFavoriteId(null); return }
 
     const { error } = await supabase.from('food_entries').insert({
       user_id: user.id,
@@ -331,30 +319,25 @@ function AddFood() {
       .update({ use_count: fav.use_count + 1 })
       .eq('id', fav.id)
 
+    queryClient.invalidateQueries({ queryKey: ['food_entries'] })
+    queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
     toast.success(`${fav.name} logged!`)
     router.push(`/?date=${date}`)
   }
 
   async function handleDeleteFavorite(id: string) {
-    const supabase = createClient()
+    if (!user) return
     const { error } = await supabase.from('favorite_foods').delete().eq('id', id)
     if (error) {
       toast.error('Failed to remove favorite')
     } else {
-      setFavorites((prev) => prev.filter((f) => f.id !== id))
+      queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
     }
   }
 
   async function handleSave() {
-    if (!result) return
+    if (!result || !user) return
     setSaving(true)
-
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      toast.error('Not authenticated')
-      return
-    }
 
     const { error } = await supabase.from('food_entries').insert({
       user_id: user.id,
@@ -373,6 +356,7 @@ function AddFood() {
     if (error) {
       toast.error('Failed to save: ' + error.message)
     } else {
+      queryClient.invalidateQueries({ queryKey: ['food_entries'] })
       toast.success('Food logged!')
       router.push('/')
     }

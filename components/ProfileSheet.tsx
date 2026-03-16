@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Settings, History, LogOut } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 
 interface ProfileSheetProps {
@@ -14,6 +15,8 @@ interface ProfileSheetProps {
 
 export default function ProfileSheet({ open, onClose, email, avatarLetter }: ProfileSheetProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -23,15 +26,10 @@ export default function ProfileSheet({ open, onClose, email, avatarLetter }: Pro
     return () => document.removeEventListener('keydown', handleKey)
   }, [open, onClose])
 
-  useEffect(() => {
-    if (open) document.body.style.overflow = 'hidden'
-    else document.body.style.overflow = ''
-    return () => { document.body.style.overflow = '' }
-  }, [open])
-
   async function handleLogout() {
     const supabase = createClient()
     await supabase.auth.signOut()
+    queryClient.clear()
     onClose()
     router.push('/login')
   }
@@ -47,56 +45,54 @@ export default function ProfileSheet({ open, onClose, email, avatarLetter }: Pro
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
+        className="fixed inset-0 z-40"
         onClick={onClose}
       />
 
-      {/* Sheet */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto">
-        <div className="bg-[#111118] border border-[#1E1E2E] rounded-t-3xl p-6">
-          {/* Handle */}
-          <div className="w-10 h-1 bg-[#2A2A3E] rounded-full mx-auto mb-6" />
-
-          {/* Avatar + Info */}
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-14 h-14 rounded-full bg-indigo-600 flex items-center justify-center text-xl font-bold text-white flex-shrink-0">
-              {avatarLetter}
-            </div>
-            <div className="min-w-0">
-              <p className="font-semibold text-[#F8FAFC] text-base truncate">
-                {email.split('@')[0]}
-              </p>
-              <p className="text-sm text-[#64748B] truncate">{email}</p>
-            </div>
+      {/* Dropdown */}
+      <div
+        ref={containerRef}
+        className="fixed top-14 right-4 z-50 w-64 bg-[#111118] border border-[#1E1E2E] rounded-2xl shadow-2xl shadow-black/60 overflow-hidden"
+      >
+        {/* Avatar + Info */}
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-[#1E1E2E]">
+          <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-base font-bold text-white flex-shrink-0">
+            {avatarLetter}
           </div>
-
-          {/* Actions */}
-          <div className="space-y-1 mb-4">
-            <button
-              onClick={() => navigate('/settings')}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#1A1A24] transition-colors text-left"
-            >
-              <Settings size={18} className="text-[#64748B]" />
-              <span className="text-[#F8FAFC] font-medium">Settings</span>
-            </button>
-            <button
-              onClick={() => navigate('/history')}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#1A1A24] transition-colors text-left"
-            >
-              <History size={18} className="text-[#64748B]" />
-              <span className="text-[#F8FAFC] font-medium">History</span>
-            </button>
+          <div className="min-w-0">
+            <p className="font-semibold text-[#F8FAFC] text-sm truncate">
+              {email.split('@')[0]}
+            </p>
+            <p className="text-xs text-[#64748B] truncate">{email}</p>
           </div>
+        </div>
 
-          <div className="border-t border-[#1E1E2E] pt-4">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 transition-colors text-left"
-            >
-              <LogOut size={18} className="text-red-400" />
-              <span className="text-red-400 font-medium">Log out</span>
-            </button>
-          </div>
+        {/* Actions */}
+        <div className="py-1">
+          <button
+            onClick={() => navigate('/settings')}
+            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#1A1A24] transition-colors text-left"
+          >
+            <Settings size={16} className="text-[#64748B]" />
+            <span className="text-[#F8FAFC] text-sm font-medium">Settings</span>
+          </button>
+          <button
+            onClick={() => navigate('/history')}
+            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#1A1A24] transition-colors text-left"
+          >
+            <History size={16} className="text-[#64748B]" />
+            <span className="text-[#F8FAFC] text-sm font-medium">History</span>
+          </button>
+        </div>
+
+        <div className="border-t border-[#1E1E2E] py-1">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-500/10 transition-colors text-left"
+          >
+            <LogOut size={16} className="text-red-400" />
+            <span className="text-red-400 text-sm font-medium">Log out</span>
+          </button>
         </div>
       </div>
     </>

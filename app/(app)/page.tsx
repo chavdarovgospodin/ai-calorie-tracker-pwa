@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo, Suspense } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Zap } from 'lucide-react'
 import { toast } from 'sonner'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { saveLastUser } from '@/lib/lastUser'
 import CalorieRing from '@/components/CalorieRing'
@@ -27,53 +28,12 @@ function Dashboard() {
   const searchParams = useSearchParams()
   const today = new Date().toLocaleDateString('en-CA')
   const [date, setDate] = useState(searchParams.get('date') ?? today)
-  const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([])
-  const [activityEntries, setActivityEntries] = useState<ActivityEntry[]>([])
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [userEmail, setUserEmail] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [earliestDate, setEarliestDate] = useState<string | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
 
   const supabase = useMemo(() => createClient(), [])
+  const queryClient = useQueryClient()
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    setUserEmail(user.email ?? '')
-
-    const [profileRes, foodRes, activityRes] = await Promise.all([
-      supabase.from('user_profiles').select('*').eq('user_id', user.id).single(),
-      supabase.from('food_entries').select('*').eq('user_id', user.id).eq('date', date).order('created_at', { ascending: true }),
-      supabase.from('activity_entries').select('*').eq('user_id', user.id).eq('date', date).order('created_at', { ascending: true }),
-    ])
-
-    if (profileRes.data) setProfile(profileRes.data)
-    if (foodRes.data) setFoodEntries(foodRes.data)
-    if (activityRes.data) setActivityEntries(activityRes.data)
-    setLoading(false)
-  }, [date, supabase])
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  useEffect(() => {
-    async function loadEarliestDate() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const [foodRes, activityRes] = await Promise.all([
-        supabase.from('food_entries').select('date').eq('user_id', user.id).order('date', { ascending: true }).limit(1).maybeSingle(),
-        supabase.from('activity_entries').select('date').eq('user_id', user.id).order('date', { ascending: true }).limit(1).maybeSingle(),
-      ])
-      const dates = [foodRes.data?.date, activityRes.data?.date].filter(Boolean) as string[]
-      if (dates.length > 0) setEarliestDate(dates.sort()[0])
-    }
-    loadEarliestDate()
-  }, [supabase])
-
+  // Save last user from OAuth callback params
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const cbEmail = params.get('cb_email')
@@ -84,12 +44,74 @@ function Dashboard() {
     }
   }, [])
 
+  const { data: user } = useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      return user
+    },
+  })
+
+  const { data: profile } = useQuery<UserProfile | null>({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', user!.id)
+        .single()
+      return data
+    },
+    enabled: !!user,
+  })
+
+  const { data: foodEntries = [], isLoading } = useQuery<FoodEntry[]>({
+    queryKey: ['food_entries', date, user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('food_entries')
+        .select('*')
+        .eq('user_id', user!.id)
+        .eq('date', date)
+        .order('created_at', { ascending: true })
+      return data ?? []
+    },
+    enabled: !!user,
+  })
+
+  const { data: activityEntries = [] } = useQuery<ActivityEntry[]>({
+    queryKey: ['activity_entries', date, user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('activity_entries')
+        .select('*')
+        .eq('user_id', user!.id)
+        .eq('date', date)
+        .order('created_at', { ascending: true })
+      return data ?? []
+    },
+    enabled: !!user,
+  })
+
+  const { data: earliestDate } = useQuery<string | null>({
+    queryKey: ['earliest_date', user?.id],
+    queryFn: async () => {
+      const [foodRes, activityRes] = await Promise.all([
+        supabase.from('food_entries').select('date').eq('user_id', user!.id).order('date', { ascending: true }).limit(1).maybeSingle(),
+        supabase.from('activity_entries').select('date').eq('user_id', user!.id).order('date', { ascending: true }).limit(1).maybeSingle(),
+      ])
+      const dates = [foodRes.data?.date, activityRes.data?.date].filter(Boolean) as string[]
+      return dates.length > 0 ? dates.sort()[0] : null
+    },
+    enabled: !!user,
+  })
+
   async function handleDeleteFood(id: string) {
     const { error } = await supabase.from('food_entries').delete().eq('id', id)
     if (error) {
       toast.error('Failed to delete entry')
     } else {
-      setFoodEntries((prev) => prev.filter((e) => e.id !== id))
+      queryClient.invalidateQueries({ queryKey: ['food_entries', date] })
       toast.success('Entry deleted')
     }
   }
@@ -99,7 +121,7 @@ function Dashboard() {
     if (error) {
       toast.error('Failed to delete activity')
     } else {
-      setActivityEntries((prev) => prev.filter((e) => e.id !== id))
+      queryClient.invalidateQueries({ queryKey: ['activity_entries', date] })
       toast.success('Activity deleted')
     }
   }
@@ -112,11 +134,11 @@ function Dashboard() {
 
   const baseTarget = profile?.daily_calorie_target ?? 2000
   const target = baseTarget + totalBurned
-  // Macro targets (rough % of calories)
   const proteinTarget = Math.round((target * 0.25) / 4)
   const carbsTarget = Math.round((target * 0.45) / 4)
   const fatTarget = Math.round((target * 0.30) / 9)
 
+  const userEmail = user?.email ?? ''
   const avatarLetter = userEmail ? userEmail[0].toUpperCase() : '?'
 
   return (
@@ -135,7 +157,7 @@ function Dashboard() {
 
       {/* Calorie Ring */}
       <div className="flex justify-center mb-6">
-        {loading ? (
+        {isLoading ? (
           <div className="w-[220px] h-[220px] rounded-full bg-[#111118] animate-pulse" />
         ) : (
           <CalorieRing consumed={totalCalories} target={target} burned={totalBurned} />
@@ -161,7 +183,7 @@ function Dashboard() {
             Add
           </button>
         </div>
-        {loading ? (
+        {isLoading ? (
           <div className="space-y-2">
             {[1, 2].map((i) => (
               <div key={i} className="h-20 rounded-2xl bg-[#111118] animate-pulse" />
@@ -202,7 +224,7 @@ function Dashboard() {
             Log
           </button>
         </div>
-        {loading ? (
+        {isLoading ? (
           <div className="h-16 rounded-2xl bg-[#111118] animate-pulse" />
         ) : activityEntries.length === 0 ? (
           <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-6 text-center">

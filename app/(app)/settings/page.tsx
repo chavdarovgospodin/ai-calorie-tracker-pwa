@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Save } from 'lucide-react'
+import { Save, LogOut } from 'lucide-react'
 import { toast } from 'sonner'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { calculateFromProfile } from '@/lib/calculations'
 import type { UserProfile } from '@/lib/types'
@@ -12,9 +13,7 @@ type ProfileFields = Pick<UserProfile, 'age' | 'weight' | 'height' | 'gender' | 
 
 export default function SettingsPage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [email, setEmail] = useState('')
 
   const [age, setAge] = useState('')
   const [weight, setWeight] = useState('')
@@ -24,32 +23,41 @@ export default function SettingsPage() {
   const [activityLevel, setActivityLevel] = useState<UserProfile['activity_level']>('moderately_active')
 
   const supabase = useMemo(() => createClient(), [])
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    async function loadProfile() {
+  const { data: user } = useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
+      return user
+    },
+  })
 
-      setEmail(user.email ?? '')
-
-      const { data: profile } = await supabase
+  const { data: profileData } = useQuery<UserProfile | null>({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', user!.id)
         .single()
+      return data
+    },
+    enabled: !!user,
+  })
 
-      if (profile) {
-        setAge(String(profile.age))
-        setWeight(String(profile.weight))
-        setHeight(String(profile.height))
-        setGender(profile.gender)
-        setGoal(profile.goal)
-        setActivityLevel(profile.activity_level)
-      }
-      setLoading(false)
+  useEffect(() => {
+    if (profileData) {
+      setAge(String(profileData.age))
+      setWeight(String(profileData.weight))
+      setHeight(String(profileData.height))
+      setGender(profileData.gender)
+      setGoal(profileData.goal)
+      setActivityLevel(profileData.activity_level)
     }
-    loadProfile()
-  }, [router, supabase])
+  }, [profileData])
+
+  const isLoading = !user || !profileData
 
   const ageNum = Number(age)
   const weightNum = Number(weight)
@@ -91,10 +99,9 @@ export default function SettingsPage() {
     }
     setSaving(true)
 
-    const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const profileData: ProfileFields = {
+    const profileFields: ProfileFields = {
       age: ageNum,
       weight: weightNum,
       height: heightNum,
@@ -103,11 +110,11 @@ export default function SettingsPage() {
       activity_level: activityLevel,
     }
 
-    const daily_calorie_target = calculateFromProfile(profileData)
+    const daily_calorie_target = calculateFromProfile(profileFields)
 
     const { error } = await supabase.from('user_profiles').upsert({
       user_id: user.id,
-      ...profileData,
+      ...profileFields,
       daily_calorie_target,
       onboarding_completed: true,
     })
@@ -115,21 +122,22 @@ export default function SettingsPage() {
     if (error) {
       toast.error('Failed to save: ' + error.message)
     } else {
-      toast.success('Profile updated!')
+      toast.success('Settings saved!')
+      queryClient.invalidateQueries({ queryKey: ['profile', user.id] })
     }
     setSaving(false)
   }
 
   async function handleLogout() {
     await supabase.auth.signOut()
+    queryClient.clear()
     router.push('/login')
-    router.refresh()
   }
 
   const inputClass = "w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
   const selectClass = "w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] outline-none transition-colors appearance-none"
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="p-4">
         <div className="h-8 bg-[#111118] rounded-xl animate-pulse mb-6 w-36" />
@@ -152,7 +160,7 @@ export default function SettingsPage() {
       {/* Account info */}
       <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-4 mb-5">
         <p className="text-xs text-[#64748B] mb-1">Account</p>
-        <p className="font-medium text-[#F8FAFC]">{email}</p>
+        <p className="font-medium text-[#F8FAFC]">{user?.email}</p>
       </div>
 
       {/* Profile fields */}
@@ -214,7 +222,6 @@ export default function SettingsPage() {
           </select>
         </div>
 
-        {/* Live calorie preview */}
         {caloriePreview && (
           <div className="p-4 rounded-2xl bg-indigo-600/10 border border-indigo-500/30">
             <p className="text-xs text-[#64748B]">Calculated daily target</p>
@@ -233,6 +240,17 @@ export default function SettingsPage() {
             <Save size={16} />
           )}
           Save Changes
+        </button>
+      </div>
+
+      {/* Logout */}
+      <div className="mt-8 mb-4">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2 border border-red-500/30 text-red-400 hover:bg-red-500/10 rounded-xl px-5 py-2.5 font-semibold transition-colors"
+        >
+          <LogOut size={16} />
+          Log Out
         </button>
       </div>
     </div>

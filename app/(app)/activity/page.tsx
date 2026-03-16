@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef, Suspense } from 'react'
+import { useState, useRef, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Sparkles, CheckCircle, AlertCircle, Flame, Star, Trash2 as TrashIcon } from 'lucide-react'
 import { toast } from 'sonner'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { ActivityAnalysis, FavoriteActivity } from '@/lib/types'
 
@@ -106,40 +107,50 @@ function AddActivity() {
   const [validationError, setValidationError] = useState<string | null>(null)
   const [result, setResult] = useState<ActivityAnalysis | null>(null)
   const [saving, setSaving] = useState(false)
-  const [favorites, setFavorites] = useState<FavoriteActivity[]>([])
-  const [weightKg, setWeightKg] = useState(70)
   const [loggingFavoriteId, setLoggingFavoriteId] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function loadFavorites() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+  const supabase = useMemo(() => createClient(), [])
+  const queryClient = useQueryClient()
 
-      const { data: profile } = await supabase
+  const { data: user } = useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      return user
+    },
+  })
+
+  const { data: profileData } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
         .from('user_profiles')
         .select('weight')
-        .eq('user_id', user.id)
+        .eq('user_id', user!.id)
         .single()
-      if (profile?.weight) setWeightKg(profile.weight)
+      return data
+    },
+    enabled: !!user,
+  })
 
+  const weightKg: number = profileData?.weight ?? 70
+
+  const { data: favorites = [] } = useQuery<FavoriteActivity[]>({
+    queryKey: ['favorite_activities', user?.id],
+    queryFn: async () => {
       const { data } = await supabase
         .from('favorite_activities')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', user!.id)
         .order('use_count', { ascending: false })
         .limit(10)
-      if (data) setFavorites(data)
-    }
-    loadFavorites()
-  }, [])
+      return data ?? []
+    },
+    enabled: !!user,
+  })
 
   async function handleSaveFavorite() {
-    if (!result) return
-
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!result || !user) return
 
     const { data: existing } = await supabase
       .from('favorite_activities')
@@ -160,18 +171,11 @@ function AddActivity() {
       if (error) {
         toast.error('Failed to update favorite')
       } else {
-        setFavorites(prev =>
-          prev
-            .map(f => f.id === existing.id
-              ? { ...f, calories_burned: result!.caloriesBurned, use_count: existing.use_count + 1 }
-              : f
-            )
-            .sort((a, b) => b.use_count - a.use_count)
-        )
+        queryClient.invalidateQueries({ queryKey: ['favorite_activities', user.id] })
         toast.success('Favorite updated ⭐')
       }
     } else {
-      const { data: newFav, error } = await supabase
+      const { error } = await supabase
         .from('favorite_activities')
         .insert({
           user_id: user.id,
@@ -179,25 +183,19 @@ function AddActivity() {
           calories_burned: result.caloriesBurned,
           use_count: 1,
         })
-        .select()
-        .single()
 
       if (error) {
         toast.error('Failed to save favorite')
       } else {
-        setFavorites(prev =>
-          [newFav, ...prev].sort((a, b) => b.use_count - a.use_count)
-        )
+        queryClient.invalidateQueries({ queryKey: ['favorite_activities', user.id] })
         toast.success('Added to favorites ⭐')
       }
     }
   }
 
   async function handleLogFavorite(fav: FavoriteActivity) {
+    if (!user) return
     setLoggingFavoriteId(fav.id)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setLoggingFavoriteId(null); return }
 
     const { error } = await supabase.from('activity_entries').insert({
       user_id: user.id,
@@ -220,17 +218,19 @@ function AddActivity() {
       .update({ use_count: fav.use_count + 1 })
       .eq('id', fav.id)
 
+    queryClient.invalidateQueries({ queryKey: ['activity_entries'] })
+    queryClient.invalidateQueries({ queryKey: ['favorite_activities', user.id] })
     toast.success(`${fav.description} logged!`)
     router.push(`/?date=${date}`)
   }
 
   async function handleDeleteFavorite(id: string) {
-    const supabase = createClient()
+    if (!user) return
     const { error } = await supabase.from('favorite_activities').delete().eq('id', id)
     if (error) {
       toast.error('Failed to remove favorite')
     } else {
-      setFavorites((prev) => prev.filter((f) => f.id !== id))
+      queryClient.invalidateQueries({ queryKey: ['favorite_activities', user.id] })
     }
   }
 
@@ -245,7 +245,6 @@ function AddActivity() {
     setResult(null)
 
     try {
-      // Step 1: Validate
       const validateRes = await fetch('/api/validate-activity', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -266,7 +265,6 @@ function AddActivity() {
         return
       }
 
-      // Step 2: Analyze with enriched_prompt
       setPhase('analyzing')
 
       const analyzeRes = await fetch('/api/analyze-activity', {
@@ -287,15 +285,8 @@ function AddActivity() {
   }
 
   async function handleSave() {
-    if (!result) return
+    if (!result || !user) return
     setSaving(true)
-
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      toast.error('Not authenticated')
-      return
-    }
 
     const { error } = await supabase.from('activity_entries').insert({
       user_id: user.id,
@@ -310,6 +301,7 @@ function AddActivity() {
     if (error) {
       toast.error('Failed to save: ' + error.message)
     } else {
+      queryClient.invalidateQueries({ queryKey: ['activity_entries'] })
       toast.success('Activity logged!')
       router.push('/')
     }
