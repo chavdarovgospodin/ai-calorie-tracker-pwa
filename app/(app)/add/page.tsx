@@ -358,7 +358,7 @@ function AddFood() {
     } else {
       queryClient.invalidateQueries({ queryKey: ['food_entries'] })
       toast.success('Food logged!')
-      router.push('/')
+      router.push(`/?date=${date}`)
     }
     setSaving(false)
   }

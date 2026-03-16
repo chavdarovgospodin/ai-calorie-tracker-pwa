@@ -280,7 +280,7 @@ function AddActivity() {
     } else {
       queryClient.invalidateQueries({ queryKey: ['activity_entries'] })
       toast.success('Activity logged!')
-      router.push('/')
+      router.push(`/?date=${date}`)
     }
     setSaving(false)
   }
