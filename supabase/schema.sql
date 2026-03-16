@@ -76,7 +76,8 @@ CREATE TABLE IF NOT EXISTS favorite_activities (
   calories_burned INTEGER NOT NULL,
   duration_minutes INTEGER,
   use_count INTEGER NOT NULL DEFAULT 1,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT favorite_activities_user_id_name_key UNIQUE (user_id, name)
 );
 
 ALTER TABLE favorite_foods ENABLE ROW LEVEL SECURITY;

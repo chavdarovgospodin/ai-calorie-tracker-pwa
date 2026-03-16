@@ -152,44 +152,23 @@ function AddActivity() {
   async function handleSaveFavorite() {
     if (!result || !user) return
 
-    const { data: existing } = await supabase
+    const { error } = await supabase
       .from('favorite_activities')
-      .select('id, use_count')
-      .eq('user_id', user.id)
-      .ilike('name', result.activityName)
-      .maybeSingle()
-
-    if (existing) {
-      const { error } = await supabase
-        .from('favorite_activities')
-        .update({
-          calories_burned: result.caloriesBurned,
-          use_count: existing.use_count + 1,
-        })
-        .eq('id', existing.id)
-
-      if (error) {
-        toast.error('Failed to update favorite')
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['favorite_activities', user.id] })
-        toast.success('Favorite updated ⭐')
-      }
-    } else {
-      const { error } = await supabase
-        .from('favorite_activities')
-        .insert({
+      .upsert(
+        {
           user_id: user.id,
           name: result.activityName,
-          calories_burned: result.caloriesBurned,
+          calories_burned: Math.round(result.caloriesBurned),
           use_count: 1,
-        })
+        },
+        { onConflict: 'user_id,name' },
+      )
 
-      if (error) {
-        toast.error('Failed to save favorite')
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['favorite_activities', user.id] })
-        toast.success('Added to favorites ⭐')
-      }
+    if (error) {
+      toast.error('Failed to save favorite')
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['favorite_activities', user.id] })
+      toast.success('Added to favorites ⭐')
     }
   }
 
@@ -201,7 +180,7 @@ function AddActivity() {
       user_id: user.id,
       date,
       description: fav.name,
-      calories_burned: fav.calories_burned,
+      calories_burned: Math.round(fav.calories_burned),
       notes: null,
       ai_confidence: null,
     })
@@ -291,7 +270,7 @@ function AddActivity() {
       user_id: user.id,
       date,
       description: result.activityName,
-      calories_burned: result.caloriesBurned,
+      calories_burned: Math.round(result.caloriesBurned),
       notes: notes || null,
       ai_confidence: result.confidence,
     })
