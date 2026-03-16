@@ -82,7 +82,7 @@ export interface FavoriteFood {
 export interface FavoriteActivity {
   id: string
   user_id: string
-  description: string
+  name: string
   calories_burned: number
   use_count: number
   created_at: string

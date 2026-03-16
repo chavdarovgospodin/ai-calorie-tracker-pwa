@@ -65,7 +65,7 @@ function FavoriteActivityRow({
   return (
     <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl px-3 py-2.5 flex items-center gap-2">
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[#F8FAFC] truncate">{fav.description}</p>
+        <p className="text-sm font-medium text-[#F8FAFC] truncate">{fav.name}</p>
         <p className="text-xs text-amber-400">{fav.calories_burned} kcal burned</p>
       </div>
       <button
@@ -156,7 +156,7 @@ function AddActivity() {
       .from('favorite_activities')
       .select('id, use_count')
       .eq('user_id', user.id)
-      .ilike('description', result.activityName)
+      .ilike('name', result.activityName)
       .maybeSingle()
 
     if (existing) {
@@ -179,7 +179,7 @@ function AddActivity() {
         .from('favorite_activities')
         .insert({
           user_id: user.id,
-          description: result.activityName,
+          name: result.activityName,
           calories_burned: result.caloriesBurned,
           use_count: 1,
         })
@@ -200,9 +200,8 @@ function AddActivity() {
     const { error } = await supabase.from('activity_entries').insert({
       user_id: user.id,
       date,
-      description: fav.description,
+      description: fav.name,
       calories_burned: fav.calories_burned,
-      duration_minutes: null,
       notes: null,
       ai_confidence: null,
     })
@@ -220,7 +219,7 @@ function AddActivity() {
 
     queryClient.invalidateQueries({ queryKey: ['activity_entries'] })
     queryClient.invalidateQueries({ queryKey: ['favorite_activities', user.id] })
-    toast.success(`${fav.description} logged!`)
+    toast.success(`${fav.name} logged!`)
     router.push(`/?date=${date}`)
   }
 
@@ -293,7 +292,6 @@ function AddActivity() {
       date,
       description: result.activityName,
       calories_burned: result.caloriesBurned,
-      duration_minutes: result.durationMinutes ?? null,
       notes: notes || null,
       ai_confidence: result.confidence,
     })
