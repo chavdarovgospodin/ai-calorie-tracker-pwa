@@ -346,9 +346,13 @@ function AddActivity() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
+            maxLength={500}
             placeholder="e.g. 30 minutes of running at moderate pace, then 20 minutes of weight training"
             className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-3 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors resize-none"
           />
+          <p className={`text-xs mt-1 text-right ${description.length > 450 ? 'text-red-400' : 'text-[#64748B]'}`}>
+            {description.length} / 500
+          </p>
         </div>
         <div>
           <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Notes (optional)</label>
@@ -365,7 +369,7 @@ function AddActivity() {
       {/* Analyze Button */}
       <button
         onClick={handleAnalyze}
-        disabled={phase === 'validating' || phase === 'analyzing'}
+        disabled={phase === 'validating' || phase === 'analyzing' || description.length > 500}
         className="w-full mt-5 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {phase === 'idle' && <><Sparkles size={16} /> Analyze with AI</>}
