@@ -26,12 +26,15 @@ export default function OnboardingPage() {
 
     const daily_calorie_target = calculateFromProfile(data)
 
-    const { error } = await supabase.from('user_profiles').upsert({
-      user_id: user.id,
-      ...data,
-      daily_calorie_target,
-      onboarding_completed: true,
-    })
+    const { error } = await supabase.from('user_profiles').upsert(
+      {
+        user_id: user.id,
+        ...data,
+        daily_calorie_target,
+        onboarding_completed: true,
+      },
+      { onConflict: 'user_id' },
+    )
 
     if (error) {
       toast.error(t.failedToSaveProfile + ': ' + error.message)

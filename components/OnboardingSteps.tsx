@@ -18,6 +18,9 @@ interface OnboardingStepsProps {
 export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
   const { t } = useLocale();
   const [currentStep, setCurrentStep] = useState(0);
+  const [ageStr, setAgeStr] = useState('');
+  const [weightStr, setWeightStr] = useState('');
+  const [heightStr, setHeightStr] = useState('');
   const [formData, setFormData] = useState<Partial<OnboardingData>>({
     gender: undefined,
     age: undefined,
@@ -154,18 +157,26 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                   </label>
                   <input
                     type="number"
+                    inputMode="numeric"
                     min={10}
                     max={100}
-                    value={formData.age ?? ''}
-                    onChange={(e) =>
-                      setFormData((d) => ({
-                        ...d,
-                        age: Number(e.target.value),
-                      }))
-                    }
+                    value={ageStr}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setAgeStr(val)
+                      const n = parseInt(val, 10)
+                      if (!isNaN(n) && n >= 10 && n <= 100) {
+                        setFormData((d) => ({ ...d, age: n }))
+                      } else {
+                        setFormData((d) => ({ ...d, age: undefined }))
+                      }
+                    }}
                     placeholder="25"
                     className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
                   />
+                  {ageStr && !formData.age && (
+                    <p className="text-xs text-red-400 mt-1">Въведи възраст между 10 и 100</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">
@@ -173,19 +184,27 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                   </label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     min={30}
                     max={300}
                     step={0.1}
-                    value={formData.weight ?? ''}
-                    onChange={(e) =>
-                      setFormData((d) => ({
-                        ...d,
-                        weight: Number(e.target.value),
-                      }))
-                    }
+                    value={weightStr}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setWeightStr(val)
+                      const n = parseFloat(val)
+                      if (!isNaN(n) && n >= 30 && n <= 300) {
+                        setFormData((d) => ({ ...d, weight: n }))
+                      } else {
+                        setFormData((d) => ({ ...d, weight: undefined }))
+                      }
+                    }}
                     placeholder="70"
                     className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
                   />
+                  {weightStr && !formData.weight && (
+                    <p className="text-xs text-red-400 mt-1">Въведи тегло между 30 и 300 кг</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">
@@ -193,19 +212,27 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                   </label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     min={100}
                     max={250}
                     step={0.1}
-                    value={formData.height ?? ''}
-                    onChange={(e) =>
-                      setFormData((d) => ({
-                        ...d,
-                        height: Number(e.target.value),
-                      }))
-                    }
+                    value={heightStr}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setHeightStr(val)
+                      const n = parseFloat(val)
+                      if (!isNaN(n) && n >= 100 && n <= 250) {
+                        setFormData((d) => ({ ...d, height: n }))
+                      } else {
+                        setFormData((d) => ({ ...d, height: undefined }))
+                      }
+                    }}
                     placeholder="175"
                     className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
                   />
+                  {heightStr && !formData.height && (
+                    <p className="text-xs text-red-400 mt-1">Въведи височина между 100 и 250 см</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -272,9 +299,19 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
               <h2 className="text-xl font-bold text-[#F8FAFC] mb-2">
                 {t.activityLevel}
               </h2>
-              <p className="text-[#64748B] text-sm mb-6">
+              <p className="text-[#64748B] text-sm mb-4">
                 Choose your typical weekly activity level
               </p>
+
+              {/* Info hint */}
+              <div className="flex items-start gap-3 bg-indigo-600/10 border border-indigo-500/20 rounded-xl p-3 mb-6">
+                <span className="text-indigo-400 text-base mt-0.5 flex-shrink-0">💡</span>
+                <p className="text-xs text-indigo-300 leading-relaxed">
+                  If you plan to log your workouts manually in the app, choose a lower activity level.
+                  Your daily calorie target will automatically increase each time you log a workout.
+                </p>
+              </div>
+
               <div className="space-y-2">
                 {activityOptions.map(({ value, label, desc }) => (
                   <button
