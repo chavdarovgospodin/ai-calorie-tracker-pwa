@@ -112,12 +112,15 @@ export default function SettingsPage() {
 
     const daily_calorie_target = calculateFromProfile(profileFields)
 
-    const { error } = await supabase.from('user_profiles').upsert({
-      user_id: user.id,
-      ...profileFields,
-      daily_calorie_target,
-      onboarding_completed: true,
-    })
+    const { error } = await supabase.from('user_profiles').upsert(
+      {
+        user_id: user.id,
+        ...profileFields,
+        daily_calorie_target,
+        onboarding_completed: true,
+      },
+      { onConflict: 'user_id' },
+    )
 
     if (error) {
       toast.error('Failed to save: ' + error.message)
