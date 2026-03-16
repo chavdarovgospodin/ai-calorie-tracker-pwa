@@ -30,6 +30,11 @@ function Dashboard() {
   const [date, setDate] = useState(searchParams.get('date') ?? today)
   const [profileOpen, setProfileOpen] = useState(false)
 
+  useEffect(() => {
+    const param = searchParams.get('date')
+    if (param && param !== date) setDate(param)
+  }, [searchParams])
+
   const supabase = useMemo(() => createClient(), [])
   const queryClient = useQueryClient()
 
