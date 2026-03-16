@@ -36,17 +36,17 @@ export default function RegisterPage() {
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) {
       if (error.message.toLowerCase().includes('already') || error.code === 'user_already_exists') {
-        setError('An account with this email already exists. Try signing in instead.')
+        setError('Акаунт с този имейл вече съществува. Опитай да влезеш.')
       } else {
         setError(error.message)
       }
       setLoading(false)
     } else if (data.user && data.user.identities && data.user.identities.length === 0) {
       // Supabase returns a fake user with no identities when email is already registered
-      setError('An account with this email already exists. Try signing in instead.')
+      setError('Акаунт с този имейл вече съществува. Опитай да влезеш.')
       setLoading(false)
     } else {
-      toast.success('Account created! Please check your email to confirm.')
+      toast.success('Акаунтът е създаден! Провери имейла си за потвърждение.')
       router.push('/login')
     }
   }
@@ -59,11 +59,11 @@ export default function RegisterPage() {
           <h1 className="text-4xl font-black bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
             CALIO
           </h1>
-          <p className="text-[#64748B] mt-2 text-sm">Track smarter. Eat better.</p>
+          <p className="text-[#64748B] mt-2 text-sm">Проследявай по-умно. Яж по-добре.</p>
         </div>
 
         <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-6">
-          <h2 className="text-lg font-semibold text-[#F8FAFC] mb-5">Create your account</h2>
+          <h2 className="text-lg font-semibold text-[#F8FAFC] mb-5">Създай акаунт</h2>
 
           {/* Google OAuth */}
           <button
@@ -81,20 +81,20 @@ export default function RegisterPage() {
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
             )}
-            Continue with Google
+            Регистрирай се с Google
           </button>
 
           {/* Divider */}
           <div className="flex items-center gap-3 my-5">
             <div className="flex-1 h-px bg-[#1E1E2E]" />
-            <span className="text-xs text-[#64748B]">or continue with email</span>
+            <span className="text-xs text-[#64748B]">или продължи с имейл</span>
             <div className="flex-1 h-px bg-[#1E1E2E]" />
           </div>
 
           {/* Email form */}
           <form onSubmit={handleRegister} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Email</label>
+              <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Имейл</label>
               <input
                 type="email"
                 value={email}
@@ -106,7 +106,7 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Password</label>
+              <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Парола</label>
               <input
                 type="password"
                 value={password}
@@ -132,14 +132,14 @@ export default function RegisterPage() {
               {loading && (
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
-              Create Account
+              Създай акаунт
             </button>
           </form>
 
           <p className="text-center text-sm text-[#64748B] mt-5">
-            Already have an account?{' '}
+            Вече имаш акаунт?{' '}
             <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-medium">
-              Login
+              Влез
             </Link>
           </p>
         </div>

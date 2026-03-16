@@ -76,6 +76,8 @@ export async function POST(request: Request) {
 2. If valid activity: calculate calories burned
 3. If not valid: explain why
 
+Respond in Bulgarian. All text fields in the JSON (activityName, reason) must be in Bulgarian.
+
 User input: <activity_input>${text}</activity_input>
 User weight: ${weightKg}kg
 

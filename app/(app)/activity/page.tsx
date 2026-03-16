@@ -12,20 +12,20 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
   if (confidence >= 0.8) {
     return (
       <span className="flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">
-        <CheckCircle size={10} /> High confidence
+        <CheckCircle size={10} /> Висока увереност
       </span>
     )
   }
   if (confidence >= 0.6) {
     return (
       <span className="flex items-center gap-1 text-xs font-medium text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
-        <AlertCircle size={10} /> Medium confidence
+        <AlertCircle size={10} /> Средна увереност
       </span>
     )
   }
   return (
     <span className="flex items-center gap-1 text-xs font-medium text-red-400 bg-red-400/10 px-2 py-0.5 rounded-full">
-      <AlertCircle size={10} /> Low confidence
+      <AlertCircle size={10} /> Ниска увереност
     </span>
   )
 }
@@ -66,7 +66,7 @@ function FavoriteActivityRow({
     <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl px-3 py-2.5 flex items-center gap-2">
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-[#F8FAFC] truncate">{fav.name}</p>
-        <p className="text-xs text-amber-400">{fav.calories_burned} kcal burned</p>
+        <p className="text-xs text-amber-400">{fav.calories_burned} ккал изгорени</p>
       </div>
       <button
         onClick={() => onLog(fav)}
@@ -165,10 +165,10 @@ function AddActivity() {
       )
 
     if (error) {
-      toast.error('Failed to save favorite')
+      toast.error('Грешка при запазване в любими')
     } else {
       queryClient.invalidateQueries({ queryKey: ['favorite_activities', user.id] })
-      toast.success('Added to favorites ⭐')
+      toast.success('Добавено в любими ⭐')
     }
   }
 
@@ -186,7 +186,7 @@ function AddActivity() {
     })
 
     if (error) {
-      toast.error('Failed to log activity')
+      toast.error('Грешка при добавяне')
       setLoggingFavoriteId(null)
       return
     }
@@ -198,7 +198,7 @@ function AddActivity() {
 
     queryClient.invalidateQueries({ queryKey: ['activity_entries'] })
     queryClient.invalidateQueries({ queryKey: ['favorite_activities', user.id] })
-    toast.success(`${fav.name} logged!`)
+    toast.success(`${fav.name} добавено!`)
     router.push(`/?date=${date}`)
   }
 
@@ -206,7 +206,7 @@ function AddActivity() {
     if (!user) return
     const { error } = await supabase.from('favorite_activities').delete().eq('id', id)
     if (error) {
-      toast.error('Failed to remove favorite')
+      toast.error('Грешка при премахване от любими')
     } else {
       queryClient.invalidateQueries({ queryKey: ['favorite_activities', user.id] })
     }
@@ -214,7 +214,7 @@ function AddActivity() {
 
   async function handleAnalyze() {
     if (!description.trim()) {
-      toast.error('Please describe your workout')
+      toast.error('Моля опиши тренировката си')
       return
     }
 
@@ -234,11 +234,11 @@ function AddActivity() {
       if (!data.valid) {
         setPhase('error')
         if (data.error_type === 'not_an_activity') {
-          setValidationError("This doesn't look like a physical activity. Please describe a workout, sport, or exercise.")
+          setValidationError('Това не изглежда като физическа активност. Опиши тренировка, спорт или упражнение.')
         } else if (data.error_type === 'too_vague') {
-          setValidationError('Please be more specific about your activity.')
+          setValidationError('Моля бъди по-конкретен за активността.')
         } else {
-          setValidationError(data.reason ?? "This doesn't look like a physical activity. Please try again.")
+          setValidationError(data.reason ?? 'Това не изглежда като физическа активност. Опитай отново.')
         }
         return
       }
@@ -248,7 +248,7 @@ function AddActivity() {
 
     } catch {
       setPhase('error')
-      setValidationError('Something went wrong. Please try again.')
+      setValidationError('Нещо се обърка. Опитай отново.')
     }
   }
 
@@ -266,10 +266,10 @@ function AddActivity() {
     })
 
     if (error) {
-      toast.error('Failed to save: ' + error.message)
+      toast.error('Грешка при запазване: ' + error.message)
     } else {
       queryClient.invalidateQueries({ queryKey: ['activity_entries'] })
-      toast.success('Activity logged!')
+      toast.success('Активността е добавена!')
       router.push(`/?date=${date}`)
     }
     setSaving(false)
@@ -285,13 +285,13 @@ function AddActivity() {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-lg font-bold text-[#F8FAFC]">Log Activity</h1>
+        <h1 className="text-lg font-bold text-[#F8FAFC]">Добави активност</h1>
       </div>
 
       {/* Favorites */}
       {favorites.length > 0 && (
         <div className="mb-5">
-          <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Quick Log</p>
+          <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Бързо добавяне</p>
           <div className="space-y-2">
             {favorites.map((fav) => (
               <FavoriteActivityRow
@@ -308,13 +308,13 @@ function AddActivity() {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Describe your workout</label>
+          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Опиши тренировката си</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
             maxLength={500}
-            placeholder="e.g. 30 minutes of running at moderate pace, then 20 minutes of weight training"
+            placeholder="напр. 30 минути бягане с умерено темпо..."
             className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-3 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors resize-none"
           />
           <p className={`text-xs mt-1 text-right ${description.length > 450 ? 'text-red-400' : 'text-[#64748B]'}`}>
@@ -322,12 +322,12 @@ function AddActivity() {
           </p>
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Notes (optional)</label>
+          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Бележки (по избор)</label>
           <input
             type="text"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="How did it feel?"
+            placeholder="Как се почувства?"
             className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
           />
         </div>
@@ -339,10 +339,10 @@ function AddActivity() {
         disabled={phase === 'analyzing' || description.length > 500}
         className="w-full mt-5 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {phase === 'idle' && <><Sparkles size={16} /> Analyze with AI</>}
-        {phase === 'analyzing' && <>Analyzing...</>}
-        {phase === 'done' && <><Sparkles size={16} /> Re-analyze</>}
-        {phase === 'error' && <><Sparkles size={16} /> Analyze with AI</>}
+        {phase === 'idle' && <><Sparkles size={16} /> Анализирай с AI</>}
+        {phase === 'analyzing' && <>Анализира...</>}
+        {phase === 'done' && <><Sparkles size={16} /> Анализирай отново</>}
+        {phase === 'error' && <><Sparkles size={16} /> Анализирай с AI</>}
       </button>
 
       {/* ANALYZING STATE */}
@@ -353,8 +353,8 @@ function AddActivity() {
               <span className="w-5 h-5 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin block" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-[#F8FAFC]">Calculating calories burned...</p>
-              <p className="text-xs text-[#64748B] mt-0.5">Using MET values and your weight</p>
+              <p className="text-sm font-semibold text-[#F8FAFC]">Изчислява изгорените калории...</p>
+              <p className="text-xs text-[#64748B] mt-0.5">Използва MET стойности и теглото ти</p>
             </div>
           </div>
           <div className="space-y-2">
@@ -373,13 +373,13 @@ function AddActivity() {
               <AlertCircle size={20} className="text-red-400" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-red-400 mb-1">Couldn&apos;t analyze this</p>
+              <p className="text-sm font-semibold text-red-400 mb-1">Неуспешен анализ</p>
               <p className="text-sm text-[#64748B] leading-relaxed">{validationError}</p>
               <button
                 onClick={() => { setPhase('idle'); setValidationError(null) }}
                 className="mt-3 text-sm text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
               >
-                ← Try again
+                ← Опитай отново
               </button>
             </div>
           </div>
@@ -396,11 +396,11 @@ function AddActivity() {
                 <Flame size={16} className="text-amber-400" />
                 <p className="text-2xl font-bold text-amber-400">
                   {result.caloriesBurned}
-                  <span className="text-sm font-normal text-[#64748B] ml-1">kcal burned</span>
+                  <span className="text-sm font-normal text-[#64748B] ml-1">ккал изгорени</span>
                 </p>
               </div>
               {result.durationMinutes > 0 && (
-                <p className="text-sm text-[#64748B] mt-1">{result.durationMinutes} min</p>
+                <p className="text-sm text-[#64748B] mt-1">{result.durationMinutes} мин</p>
               )}
             </div>
             <ConfidenceBadge confidence={result.confidence} />
@@ -416,12 +416,12 @@ function AddActivity() {
               ) : (
                 <CheckCircle size={16} />
               )}
-              Log Activity
+              Запази активността
             </button>
             <button
               onClick={handleSaveFavorite}
               className="flex items-center justify-center gap-1.5 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl px-3 py-2.5 font-semibold transition-colors"
-              title="Save to favorites"
+              title="Запази в любими"
             >
               <Star size={16} />
             </button>

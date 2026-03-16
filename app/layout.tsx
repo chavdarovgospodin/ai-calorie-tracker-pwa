@@ -15,11 +15,11 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'Calio — Track smarter. Eat better.',
+    default: 'Calio — Проследявай по-умно. Яж по-добре.',
     template: '%s | Calio',
   },
   description:
-    'AI-powered calorie and macro tracking. Log meals with a photo or text description and let AI do the work.',
+    'AI-базирано проследяване на калории и макроси. Добавяй храна чрез снимка или текст и нека AI свърши работата.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -39,11 +39,11 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    locale: 'en_US',
+    locale: 'bg_BG',
     siteName: 'Calio',
-    title: 'Calio — Track smarter. Eat better.',
+    title: 'Calio — Проследявай по-умно. Яж по-добре.',
     description:
-      'AI-powered calorie and macro tracking. Log meals with a photo or text and let AI do the work.',
+      'AI-базирано проследяване на калории и макроси.',
     images: [
       {
         url: '/og-image.png',
@@ -55,8 +55,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Calio — Track smarter. Eat better.',
-    description: 'AI-powered calorie and macro tracking.',
+    title: 'Calio — Проследявай по-умно. Яж по-добре.',
+    description: 'AI-базирано проследяване на калории и макроси.',
     images: ['/og-image.png'],
   },
 };
@@ -67,7 +67,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="bg" className="dark">
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#0A0A0F" />

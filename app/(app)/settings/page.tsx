@@ -88,22 +88,22 @@ export default function SettingsPage() {
 
   async function handleSave() {
     if (!age || !weight || !height) {
-      toast.error('Please fill in all fields')
+      toast.error('Моля попълни всички полета')
       return
     }
     const ageNum = Number(age)
     const weightNum = Number(weight)
     const heightNum = Number(height)
     if (ageNum < 10 || ageNum > 120) {
-      toast.error('Age must be between 10 and 120')
+      toast.error('Възрастта трябва да е между 10 и 120')
       return
     }
     if (weightNum < 20 || weightNum > 300) {
-      toast.error('Weight must be between 20 and 300 kg')
+      toast.error('Теглото трябва да е между 20 и 300 кг')
       return
     }
     if (heightNum < 100 || heightNum > 250) {
-      toast.error('Height must be between 100 and 250 cm')
+      toast.error('Височината трябва да е между 100 и 250 см')
       return
     }
     setSaving(true)
@@ -132,9 +132,9 @@ export default function SettingsPage() {
     )
 
     if (error) {
-      toast.error('Failed to save: ' + error.message)
+      toast.error('Грешка при запазване: ' + error.message)
     } else {
-      toast.success('Settings saved!')
+      toast.success('Настройките са запазени!')
       queryClient.invalidateQueries({ queryKey: ['profile', user.id] })
     }
     setSaving(false)
@@ -166,22 +166,22 @@ export default function SettingsPage() {
     <div className="p-4">
       {/* Header */}
       <div className="mb-6 pt-2">
-        <h1 className="text-lg font-bold text-[#F8FAFC]">Settings</h1>
+        <h1 className="text-lg font-bold text-[#F8FAFC]">Настройки</h1>
       </div>
 
       {/* Account info */}
       <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-4 mb-5">
-        <p className="text-xs text-[#64748B] mb-1">Account</p>
+        <p className="text-xs text-[#64748B] mb-1">Акаунт</p>
         <p className="font-medium text-[#F8FAFC]">{user?.email}</p>
       </div>
 
       {/* Profile fields */}
       <div className="space-y-4">
-        <h2 className="text-sm font-semibold text-[#64748B] uppercase tracking-wide">Profile</h2>
+        <h2 className="text-sm font-semibold text-[#64748B] uppercase tracking-wide">Профил</h2>
 
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Age</label>
+            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Възраст</label>
             <input
               type="number" value={age}
               onChange={(e) => setAge(e.target.value)}
@@ -189,7 +189,7 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Weight (kg)</label>
+            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Тегло (кг)</label>
             <input
               type="number" value={weight}
               onChange={(e) => setWeight(e.target.value)}
@@ -197,7 +197,7 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Height (cm)</label>
+            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Височина (см)</label>
             <input
               type="number" value={height}
               onChange={(e) => setHeight(e.target.value)}
@@ -207,37 +207,37 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Biological Sex</label>
+          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Биологичен пол</label>
           <select value={gender} onChange={(e) => setGender(e.target.value as UserProfile['gender'])} className={selectClass}>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
+            <option value="male">Мъж</option>
+            <option value="female">Жена</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Goal</label>
+          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Цел</label>
           <select value={goal} onChange={(e) => setGoal(e.target.value as UserProfile['goal'])} className={selectClass}>
-            <option value="lose">Lose Weight</option>
-            <option value="maintain">Maintain Weight</option>
-            <option value="gain">Gain Muscle</option>
+            <option value="lose">Отслабване</option>
+            <option value="maintain">Поддържане</option>
+            <option value="gain">Качване на мускули</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Activity Level</label>
+          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Ниво на активност</label>
           <select value={activityLevel} onChange={(e) => setActivityLevel(e.target.value as UserProfile['activity_level'])} className={selectClass}>
-            <option value="sedentary">Sedentary</option>
-            <option value="lightly_active">Lightly Active</option>
-            <option value="moderately_active">Moderately Active</option>
-            <option value="very_active">Very Active</option>
-            <option value="extremely_active">Extremely Active</option>
+            <option value="sedentary">Заседнал</option>
+            <option value="lightly_active">Леко активен</option>
+            <option value="moderately_active">Умерено активен</option>
+            <option value="very_active">Много активен</option>
+            <option value="extremely_active">Изключително активен</option>
           </select>
         </div>
 
         {caloriePreview && (
           <div className="p-4 rounded-2xl bg-indigo-600/10 border border-indigo-500/30">
-            <p className="text-xs text-[#64748B]">Calculated daily target</p>
-            <p className="text-2xl font-bold text-indigo-400 mt-1">{caloriePreview.toLocaleString()} kcal</p>
+            <p className="text-xs text-[#64748B]">Изчислена дневна цел</p>
+            <p className="text-2xl font-bold text-indigo-400 mt-1">{caloriePreview.toLocaleString()} ккал</p>
           </div>
         )}
 
@@ -251,7 +251,7 @@ export default function SettingsPage() {
           ) : (
             <Save size={16} />
           )}
-          Save Changes
+          Запази промените
         </button>
       </div>
 
@@ -262,7 +262,7 @@ export default function SettingsPage() {
           className="w-full flex items-center justify-center gap-2 border border-red-500/30 text-red-400 hover:bg-red-500/10 rounded-xl px-5 py-2.5 font-semibold transition-colors"
         >
           <LogOut size={16} />
-          Log Out
+          Изход
         </button>
       </div>
     </div>

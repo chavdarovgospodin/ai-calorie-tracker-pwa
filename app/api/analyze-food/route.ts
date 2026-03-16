@@ -87,6 +87,8 @@ export async function POST(request: Request) {
 2. If valid food: analyze the nutritional content
 3. If not valid food: explain why
 
+Respond in Bulgarian. All text fields in the JSON (name, reason) must be in Bulgarian.
+
 User input: <food_input>${text}</food_input>
 
 Validation rules:
@@ -129,6 +131,8 @@ Return ONLY valid JSON, no markdown:
 1. Determine if the image shows food, a meal, a drink, ingredients, a food menu, or food packaging
 2. If valid food image: analyze the nutritional content
 3. If not valid: explain why
+
+Respond in Bulgarian. All text fields in the JSON (name, reason) must be in Bulgarian.
 
 ${descriptionStr ? `User also provided this description: <description>${descriptionStr}</description>` : ''}
 
