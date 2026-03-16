@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { TrendingDown, Minus, TrendingUp } from 'lucide-react';
 import { calculateFromProfile } from '@/lib/calculations';
 import type { UserProfile } from '@/lib/types';
+import { useLocale } from '@/lib/locale-context';
 
 type OnboardingData = Pick<
   UserProfile,
@@ -14,39 +15,8 @@ interface OnboardingStepsProps {
   onComplete: (data: OnboardingData) => void;
 }
 
-const activityOptions: {
-  value: UserProfile['activity_level'];
-  label: string;
-  desc: string;
-}[] = [
-  {
-    value: 'sedentary',
-    label: 'Sedentary',
-    desc: 'Little or no exercise, desk job',
-  },
-  {
-    value: 'lightly_active',
-    label: 'Lightly Active',
-    desc: 'Light exercise 1-3 days/week',
-  },
-  {
-    value: 'moderately_active',
-    label: 'Moderately Active',
-    desc: 'Moderate exercise 3-5 days/week',
-  },
-  {
-    value: 'very_active',
-    label: 'Very Active',
-    desc: 'Hard exercise 6-7 days/week',
-  },
-  {
-    value: 'extremely_active',
-    label: 'Extremely Active',
-    desc: 'Very hard exercise, physical job',
-  },
-];
-
 export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
+  const { t } = useLocale();
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<Partial<OnboardingData>>({
     gender: undefined,
@@ -58,6 +28,18 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
   });
 
   const totalSteps = 4;
+
+  const activityOptions: {
+    value: UserProfile['activity_level'];
+    label: string;
+    desc: string;
+  }[] = [
+    { value: 'sedentary', label: t.sedentary, desc: t.sedentaryDesc },
+    { value: 'lightly_active', label: t.lightlyActive, desc: t.lightlyActiveDesc },
+    { value: 'moderately_active', label: t.moderatelyActive, desc: t.moderatelyActiveDesc },
+    { value: 'very_active', label: t.veryActive, desc: t.veryActiveDesc },
+    { value: 'extremely_active', label: t.extremelyActive, desc: t.extremelyActiveDesc },
+  ];
 
   function isStepComplete() {
     switch (currentStep) {
@@ -102,7 +84,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
             CALIO
           </h1>
           <p className="text-[#64748B] text-sm mt-1">
-            Let&apos;s set up your profile
+            {t.letsSetupProfile}
           </p>
         </div>
 
@@ -110,7 +92,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-[#64748B]">
-              Step {currentStep + 1} of {totalSteps}
+              {t.step} {currentStep + 1} {t.of} {totalSteps}
             </span>
             <span className="text-xs text-[#64748B]">
               {Math.round(((currentStep + 1) / totalSteps) * 100)}%
@@ -130,10 +112,10 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
           {currentStep === 0 && (
             <div>
               <h2 className="text-xl font-bold text-[#F8FAFC] mb-2">
-                What&apos;s your gender?
+                {t.biologicalSex}
               </h2>
               <p className="text-[#64748B] text-sm mb-6">
-                Used to calculate your metabolic rate
+                {t.usedForMetabolicRate}
               </p>
               <div className="grid grid-cols-2 gap-4">
                 {(['male', 'female'] as const).map((g) => (
@@ -147,8 +129,8 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                     }`}
                   >
                     <span className="text-4xl">{g === 'male' ? '♂' : '♀'}</span>
-                    <span className="font-semibold text-[#F8FAFC] capitalize">
-                      {g}
+                    <span className="font-semibold text-[#F8FAFC]">
+                      {g === 'male' ? t.male : t.female}
                     </span>
                   </button>
                 ))}
@@ -160,7 +142,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
           {currentStep === 1 && (
             <div>
               <h2 className="text-xl font-bold text-[#F8FAFC] mb-2">
-                Your measurements
+                {t.yourMeasurements}
               </h2>
               <p className="text-[#64748B] text-sm mb-6">
                 We&apos;ll use these to calculate your calorie needs
@@ -168,7 +150,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">
-                    Age
+                    {t.age}
                   </label>
                   <input
                     type="number"
@@ -187,7 +169,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">
-                    Weight (kg)
+                    {t.weight} (kg)
                   </label>
                   <input
                     type="number"
@@ -207,7 +189,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">
-                    Height (cm)
+                    {t.height} (cm)
                   </label>
                   <input
                     type="number"
@@ -233,7 +215,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
           {currentStep === 2 && (
             <div>
               <h2 className="text-xl font-bold text-[#F8FAFC] mb-2">
-                What&apos;s your goal?
+                {t.yourGoal}
               </h2>
               <p className="text-[#64748B] text-sm mb-6">
                 We&apos;ll adjust your calorie target accordingly
@@ -242,21 +224,21 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                 {[
                   {
                     value: 'lose' as const,
-                    label: 'Lose Weight',
+                    label: t.loseWeight,
                     desc: '500 kcal deficit per day',
                     Icon: TrendingDown,
                     color: 'text-blue-400',
                   },
                   {
                     value: 'maintain' as const,
-                    label: 'Maintain Weight',
+                    label: t.maintainWeight,
                     desc: 'Stay at current weight',
                     Icon: Minus,
                     color: 'text-indigo-400',
                   },
                   {
                     value: 'gain' as const,
-                    label: 'Gain Muscle',
+                    label: t.gainMuscle,
                     desc: '300 kcal surplus per day',
                     Icon: TrendingUp,
                     color: 'text-emerald-400',
@@ -288,7 +270,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
           {currentStep === 3 && (
             <div>
               <h2 className="text-xl font-bold text-[#F8FAFC] mb-2">
-                How active are you?
+                {t.activityLevel}
               </h2>
               <p className="text-[#64748B] text-sm mb-6">
                 Choose your typical weekly activity level
@@ -320,10 +302,10 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
               {caloriePreview && (
                 <div className="mt-5 p-4 rounded-2xl bg-indigo-600/10 border border-indigo-500/30">
                   <p className="text-sm text-[#64748B]">
-                    Your estimated daily target
+                    {t.calculatedDailyTarget}
                   </p>
                   <p className="text-2xl font-bold text-indigo-400 mt-1">
-                    {caloriePreview.toLocaleString()} kcal
+                    {caloriePreview.toLocaleString()} {t.kcal}
                   </p>
                 </div>
               )}
@@ -349,7 +331,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
             disabled={!isStepComplete()}
             className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {currentStep === totalSteps - 1 ? 'Start Tracking' : 'Next'}
+            {currentStep === totalSteps - 1 ? t.finish : t.next}
           </button>
         </div>
       </div>

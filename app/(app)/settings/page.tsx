@@ -8,6 +8,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { calculateFromProfile } from '@/lib/calculations';
 import type { UserProfile } from '@/lib/types';
+import { useLocale } from '@/lib/locale-context';
+import type { Locale } from '@/lib/i18n';
 
 type ProfileFields = Pick<
   UserProfile,
@@ -15,6 +17,7 @@ type ProfileFields = Pick<
 >;
 
 export default function SettingsPage() {
+  const { t, locale, setLocale } = useLocale();
   const router = useRouter();
   const [saving, setSaving] = useState(false);
 
@@ -99,7 +102,7 @@ export default function SettingsPage() {
 
   async function handleSave() {
     if (!age || !weight || !height) {
-      toast.error('Please fill in all fields');
+      toast.error(t.pleaseFillAllFields);
       return;
     }
     const ageNum = Number(age);
@@ -143,9 +146,9 @@ export default function SettingsPage() {
     );
 
     if (error) {
-      toast.error('Failed to save: ' + error.message);
+      toast.error(t.failedToSave + ': ' + error.message);
     } else {
-      toast.success('Settings saved!');
+      toast.success(t.profileUpdated);
       queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
     }
     setSaving(false);
@@ -182,13 +185,40 @@ export default function SettingsPage() {
     <div className="p-4">
       {/* Header */}
       <div className="mb-6 pt-2">
-        <h1 className="text-lg font-bold text-[#F8FAFC]">Settings</h1>
+        <h1 className="text-lg font-bold text-[#F8FAFC]">{t.settings}</h1>
       </div>
 
       {/* Account info */}
       <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-4 mb-5">
-        <p className="text-xs text-[#64748B] mb-1">Account</p>
+        <p className="text-xs text-[#64748B] mb-1">{t.account}</p>
         <p className="font-medium text-[#F8FAFC]">{user?.email}</p>
+      </div>
+
+      {/* Language Section */}
+      <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-4 mb-5">
+        <p className="text-xs text-[#64748B] mb-3">{t.language}</p>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setLocale('en' as Locale)}
+            className={`py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+              locale === 'en'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-[#0A0A0F] border border-[#1E1E2E] text-[#64748B] hover:text-[#F8FAFC]'
+            }`}
+          >
+            🇬🇧 {t.english}
+          </button>
+          <button
+            onClick={() => setLocale('bg' as Locale)}
+            className={`py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+              locale === 'bg'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-[#0A0A0F] border border-[#1E1E2E] text-[#64748B] hover:text-[#F8FAFC]'
+            }`}
+          >
+            🇧🇬 {t.bulgarian}
+          </button>
+        </div>
       </div>
 
       {/* Profile fields */}
@@ -200,7 +230,7 @@ export default function SettingsPage() {
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">
-              Age
+              {t.age}
             </label>
             <input
               type="number"
@@ -214,7 +244,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">
-              Weight (kg)
+              {t.weight} (kg)
             </label>
             <input
               type="number"
@@ -228,7 +258,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">
-              Height (cm)
+              {t.height} (cm)
             </label>
             <input
               type="number"
@@ -244,36 +274,36 @@ export default function SettingsPage() {
 
         <div>
           <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">
-            Sex
+            {t.biologicalSex}
           </label>
           <select
             value={gender}
             onChange={(e) => setGender(e.target.value as UserProfile['gender'])}
             className={selectClass}
           >
-            <option value="male">Male</option>
-            <option value="female">Female</option>
+            <option value="male">{t.male}</option>
+            <option value="female">{t.female}</option>
           </select>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">
-            Goal
+            {t.goal}
           </label>
           <select
             value={goal}
             onChange={(e) => setGoal(e.target.value as UserProfile['goal'])}
             className={selectClass}
           >
-            <option value="lose">Lose Weight</option>
-            <option value="maintain">Maintain Weight</option>
-            <option value="gain">Gain Muscle</option>
+            <option value="lose">{t.loseWeight}</option>
+            <option value="maintain">{t.maintainWeight}</option>
+            <option value="gain">{t.gainMuscle}</option>
           </select>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">
-            Activity Level
+            {t.activityLevel}
           </label>
           <select
             value={activityLevel}
@@ -282,19 +312,19 @@ export default function SettingsPage() {
             }
             className={selectClass}
           >
-            <option value="sedentary">Sedentary</option>
-            <option value="lightly_active">Lightly Active</option>
-            <option value="moderately_active">Moderately Active</option>
-            <option value="very_active">Very Active</option>
-            <option value="extremely_active">Extremely Active</option>
+            <option value="sedentary">{t.sedentary}</option>
+            <option value="lightly_active">{t.lightlyActive}</option>
+            <option value="moderately_active">{t.moderatelyActive}</option>
+            <option value="very_active">{t.veryActive}</option>
+            <option value="extremely_active">{t.extremelyActive}</option>
           </select>
         </div>
 
         {caloriePreview && (
           <div className="p-4 rounded-2xl bg-indigo-600/10 border border-indigo-500/30">
-            <p className="text-xs text-[#64748B]">Calculated daily target</p>
+            <p className="text-xs text-[#64748B]">{t.calculatedDailyTarget}</p>
             <p className="text-2xl font-bold text-indigo-400 mt-1">
-              {caloriePreview.toLocaleString()} kcal
+              {caloriePreview.toLocaleString()} {t.kcal}
             </p>
           </div>
         )}
@@ -309,7 +339,7 @@ export default function SettingsPage() {
           ) : (
             <Save size={16} />
           )}
-          Save Changes
+          {t.saveChanges}
         </button>
       </div>
 
@@ -320,7 +350,7 @@ export default function SettingsPage() {
           className="w-full flex items-center justify-center gap-2 border border-red-500/30 text-red-400 hover:bg-red-500/10 rounded-xl px-5 py-2.5 font-semibold transition-colors"
         >
           <LogOut size={16} />
-          Log Out
+          {t.logout}
         </button>
       </div>
     </div>

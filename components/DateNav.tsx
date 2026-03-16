@@ -1,24 +1,12 @@
 'use client'
 
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useLocale } from '@/lib/locale-context'
 
 interface DateNavProps {
   date: string // YYYY-MM-DD
   onChange: (date: string) => void
   earliestDate?: string // earliest date with tracked data
-}
-
-function formatDate(dateStr: string): string {
-  const today = new Date().toLocaleDateString('en-CA')
-  const yesterdayDate = new Date()
-  yesterdayDate.setDate(yesterdayDate.getDate() - 1)
-  const yesterday = yesterdayDate.toLocaleDateString('en-CA')
-
-  if (dateStr === today) return 'Today'
-  if (dateStr === yesterday) return 'Yesterday'
-
-  const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
 function addDays(dateStr: string, days: number): string {
@@ -28,12 +16,23 @@ function addDays(dateStr: string, days: number): string {
 }
 
 export default function DateNav({ date, onChange, earliestDate }: DateNavProps) {
+  const { t } = useLocale()
   const today = new Date().toLocaleDateString('en-CA')
+  const yesterdayDate = new Date()
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1)
+  const yesterday = yesterdayDate.toLocaleDateString('en-CA')
 
   const minDate = earliestDate ?? today
 
   const isToday = date === today
   const isMinDate = date <= minDate
+
+  function formatDate(dateStr: string): string {
+    if (dateStr === today) return t.today
+    if (dateStr === yesterday) return t.yesterday
+    const d = new Date(dateStr + 'T00:00:00')
+    return d.toLocaleDateString(t.dateLocale, { weekday: 'short', month: 'short', day: 'numeric' })
+  }
 
   return (
     <div className="flex items-center gap-2">

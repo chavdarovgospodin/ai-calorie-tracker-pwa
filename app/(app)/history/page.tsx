@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, TrendingUp, Calendar } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { UserProfile } from '@/lib/types'
+import { useLocale } from '@/lib/locale-context'
 
 interface DayData {
   date: string
@@ -20,16 +21,17 @@ function getMonthRange(year: number, month: number) {
   return { start, end }
 }
 
-function formatMonthLabel(year: number, month: number) {
-  return new Date(year, month - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+function formatMonthLabel(year: number, month: number, dateLocale: string) {
+  return new Date(year, month - 1, 1).toLocaleDateString(dateLocale, { month: 'long', year: 'numeric' })
 }
 
-function formatDayLabel(dateStr: string) {
+function formatDayLabel(dateStr: string, dateLocale: string) {
   const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  return date.toLocaleDateString(dateLocale, { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
 export default function HistoryPage() {
+  const { t } = useLocale()
   const router = useRouter()
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
@@ -122,7 +124,7 @@ export default function HistoryPage() {
     <div className="p-4">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6 pt-2">
-        <h1 className="text-lg font-bold text-[#F8FAFC] flex-1">History</h1>
+        <h1 className="text-lg font-bold text-[#F8FAFC] flex-1">{t.history}</h1>
       </div>
 
       {/* Month navigation */}
@@ -134,7 +136,7 @@ export default function HistoryPage() {
         >
           <ChevronLeft size={20} />
         </button>
-        <span className="text-sm font-semibold text-[#F8FAFC]">{formatMonthLabel(year, month)}</span>
+        <span className="text-sm font-semibold text-[#F8FAFC]">{formatMonthLabel(year, month, t.dateLocale)}</span>
         <button
           onClick={nextMonth}
           disabled={isCurrentMonth}
@@ -150,18 +152,18 @@ export default function HistoryPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <TrendingUp size={14} className="text-indigo-400" />
-              <span className="text-xs text-[#64748B]">Avg. Calories</span>
+              <span className="text-xs text-[#64748B]">{t.avgCalories}</span>
             </div>
             <p className="text-2xl font-bold text-[#F8FAFC]">{isLoading ? '–' : avgCalories.toLocaleString()}</p>
-            <p className="text-xs text-[#64748B]">target {target.toLocaleString()} kcal</p>
+            <p className="text-xs text-[#64748B]">{t.target} {target.toLocaleString()} {t.kcal}</p>
           </div>
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Calendar size={14} className="text-indigo-400" />
-              <span className="text-xs text-[#64748B]">Days Tracked</span>
+              <span className="text-xs text-[#64748B]">{t.daysTracked}</span>
             </div>
             <p className="text-2xl font-bold text-[#F8FAFC]">{isLoading ? '–' : trackedDays}</p>
-            <p className="text-xs text-[#64748B]">this month</p>
+            <p className="text-xs text-[#64748B]">{t.thisMonth}</p>
           </div>
         </div>
       </div>
@@ -176,7 +178,7 @@ export default function HistoryPage() {
       ) : days.length === 0 ? (
         <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-8 text-center">
           <Calendar size={28} className="text-[#64748B] mx-auto mb-3" />
-          <p className="text-[#64748B] text-sm">No data tracked this month</p>
+          <p className="text-[#64748B] text-sm">{t.noDataThisMonth}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -193,13 +195,13 @@ export default function HistoryPage() {
                 className="w-full bg-[#111118] border border-[#1E1E2E] hover:border-[#2A2A3E] rounded-2xl p-4 flex items-center justify-between transition-colors text-left"
               >
                 <div>
-                  <p className="font-medium text-[#F8FAFC] text-sm">{formatDayLabel(day.date)}</p>
+                  <p className="font-medium text-[#F8FAFC] text-sm">{formatDayLabel(day.date, t.dateLocale)}</p>
                   {day.burned > 0 && (
-                    <p className="text-xs text-amber-400 mt-0.5">🔥 {day.burned} burned</p>
+                    <p className="text-xs text-amber-400 mt-0.5">🔥 {day.burned} {t.burned}</p>
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-[#F8FAFC] tabular-nums">{day.calories.toLocaleString()} kcal</p>
+                  <p className="font-bold text-[#F8FAFC] tabular-nums">{day.calories.toLocaleString()} {t.kcal}</p>
                   <p className={`text-xs font-medium ${isOver ? 'text-red-400' : 'text-emerald-400'}`}>
                     {isOver ? '+' : ''}{diff} ({pct}%)
                   </p>

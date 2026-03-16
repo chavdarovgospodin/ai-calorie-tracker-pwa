@@ -6,18 +6,20 @@ import OnboardingSteps from '@/components/OnboardingSteps'
 import { createClient } from '@/lib/supabase/client'
 import { calculateFromProfile } from '@/lib/calculations'
 import type { UserProfile } from '@/lib/types'
+import { useLocale } from '@/lib/locale-context'
 
 type OnboardingData = Pick<UserProfile, 'age' | 'weight' | 'height' | 'gender' | 'activity_level' | 'goal'>
 
 export default function OnboardingPage() {
   const router = useRouter()
+  const { t } = useLocale()
 
   async function handleComplete(data: OnboardingData) {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      toast.error('Not authenticated')
+      toast.error(t.notAuthenticated)
       router.push('/login')
       return
     }
@@ -32,9 +34,9 @@ export default function OnboardingPage() {
     })
 
     if (error) {
-      toast.error('Failed to save profile: ' + error.message)
+      toast.error(t.failedToSaveProfile + ': ' + error.message)
     } else {
-      toast.success('Profile saved! Welcome to Calio 🎉')
+      toast.success(t.profileSaved)
       router.push('/')
       router.refresh()
     }

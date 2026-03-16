@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { Trash2 } from 'lucide-react'
 import type { FoodEntry } from '@/lib/types'
+import { useLocale } from '@/lib/locale-context'
 
 interface FoodCardProps {
   entry: FoodEntry
@@ -10,6 +11,7 @@ interface FoodCardProps {
 }
 
 export default function FoodCard({ entry, onDelete }: FoodCardProps) {
+  const { t } = useLocale()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const confirmRef = useRef(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -71,7 +73,7 @@ export default function FoodCard({ entry, onDelete }: FoodCardProps) {
               : 'text-[#64748B] hover:text-red-400 hover:bg-red-500/10'
           }`}
         >
-          {confirmDelete ? 'Confirm?' : <Trash2 size={15} />}
+          {confirmDelete ? t.confirm : <Trash2 size={15} />}
         </button>
       </div>
     </div>

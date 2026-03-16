@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { Trash2, Flame } from 'lucide-react'
 import type { ActivityEntry } from '@/lib/types'
+import { useLocale } from '@/lib/locale-context'
 
 interface ActivityCardProps {
   entry: ActivityEntry
@@ -10,6 +11,7 @@ interface ActivityCardProps {
 }
 
 export default function ActivityCard({ entry, onDelete }: ActivityCardProps) {
+  const { t } = useLocale()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const confirmRef = useRef(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -40,7 +42,7 @@ export default function ActivityCard({ entry, onDelete }: ActivityCardProps) {
         )}
         <div className="flex items-center gap-1 mt-1.5">
           <Flame size={12} className="text-amber-400" />
-          <span className="text-xs text-amber-400 font-medium">{entry.calories_burned} kcal burned</span>
+          <span className="text-xs text-amber-400 font-medium">{entry.calories_burned} {t.kcalBurned}</span>
         </div>
       </div>
 
@@ -55,7 +57,7 @@ export default function ActivityCard({ entry, onDelete }: ActivityCardProps) {
               : 'text-[#64748B] hover:text-red-400 hover:bg-red-500/10'
           }`}
         >
-          {confirmDelete ? 'Confirm?' : <Trash2 size={15} />}
+          {confirmDelete ? t.confirm : <Trash2 size={15} />}
         </button>
       </div>
     </div>

@@ -1,5 +1,7 @@
 'use client'
 
+import { useLocale } from '@/lib/locale-context'
+
 interface CalorieRingProps {
   consumed: number
   target: number
@@ -7,6 +9,7 @@ interface CalorieRingProps {
 }
 
 export default function CalorieRing({ consumed, target, burned = 0 }: CalorieRingProps) {
+  const { t } = useLocale()
   const radius = 90
   const circumference = 2 * Math.PI * radius // ~565.49
   const progress = target > 0 ? Math.min((consumed / target) * 100, 100) : 0
@@ -57,16 +60,16 @@ export default function CalorieRing({ consumed, target, burned = 0 }: CalorieRin
             {consumed.toLocaleString()}
           </span>
           <span className="text-sm text-[#64748B] mt-0.5">
-            / {target.toLocaleString()} kcal
+            / {target.toLocaleString()} {t.kcal}
           </span>
           {isOver && (
-            <span className="text-xs text-red-400 font-medium mt-1">over limit</span>
+            <span className="text-xs text-red-400 font-medium mt-1">{t.overLimit}</span>
           )}
         </div>
       </div>
       {burned > 0 && (
         <div className="mt-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
-          <span className="text-xs font-medium text-amber-400">🔥 +{burned} burned</span>
+          <span className="text-xs font-medium text-amber-400">🔥 +{burned} {t.burned}</span>
         </div>
       )}
     </div>

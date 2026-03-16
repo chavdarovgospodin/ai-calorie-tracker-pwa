@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { FoodAnalysis, FavoriteFood } from '@/lib/types'
+import { useLocale } from '@/lib/locale-context'
 
 type AnalysisPhase = 'idle' | 'analyzing' | 'done' | 'error'
 
@@ -20,23 +21,24 @@ async function toBase64(file: File): Promise<string> {
 }
 
 function ConfidenceBadge({ confidence }: { confidence: number }) {
+  const { t } = useLocale()
   if (confidence >= 0.8) {
     return (
       <span className="flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">
-        <CheckCircle size={10} /> High confidence
+        <CheckCircle size={10} /> {t.highConfidence}
       </span>
     )
   }
   if (confidence >= 0.6) {
     return (
       <span className="flex items-center gap-1 text-xs font-medium text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
-        <AlertCircle size={10} /> Medium confidence
+        <AlertCircle size={10} /> {t.mediumConfidence}
       </span>
     )
   }
   return (
     <span className="flex items-center gap-1 text-xs font-medium text-red-400 bg-red-400/10 px-2 py-0.5 rounded-full">
-      <AlertCircle size={10} /> Low confidence
+      <AlertCircle size={10} /> {t.lowConfidence}
     </span>
   )
 }
@@ -52,6 +54,7 @@ function FavoriteFoodRow({
   onDelete: (id: string) => void
   isLogging: boolean
 }) {
+  const { t } = useLocale()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const confirmRef = useRef(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -77,14 +80,14 @@ function FavoriteFoodRow({
     <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl px-3 py-2.5 flex items-center gap-2">
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-[#F8FAFC] truncate">{fav.name}</p>
-        <p className="text-xs text-[#64748B]">{fav.calories} kcal</p>
+        <p className="text-xs text-[#64748B]">{fav.calories} {t.kcal}</p>
       </div>
       <button
         onClick={() => onLog(fav)}
         disabled={isLogging}
         className={`text-xs font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-600/10 hover:bg-indigo-600/20 px-2.5 py-1 rounded-lg transition-colors${isLogging ? ' opacity-50' : ''}`}
       >
-        + Log
+        + {t.log}
       </button>
       <button
         onClick={handleDelete}
@@ -94,7 +97,7 @@ function FavoriteFoodRow({
             : 'text-[#64748B] hover:text-red-400'
         }`}
       >
-        {confirmDelete ? '?' : <TrashIcon size={13} />}
+        {confirmDelete ? t.confirm : <TrashIcon size={13} />}
       </button>
     </div>
   )
@@ -109,6 +112,7 @@ export default function AddFoodPage() {
 }
 
 function AddFood() {
+  const { locale, t } = useLocale()
   const router = useRouter()
   const searchParams = useSearchParams()
   const date = searchParams.get('date') ?? new Date().toLocaleDateString('en-CA')
@@ -169,11 +173,11 @@ function AddFood() {
 
   async function handleAnalyze() {
     if (tab === 'text' && !text.trim()) {
-      toast.error('Please describe your meal')
+      toast.error(t.pleaseDescribeMeal)
       return
     }
     if (tab === 'photo' && !imageFile) {
-      toast.error('Please select a photo')
+      toast.error(t.pleaseSelectPhoto)
       return
     }
 
@@ -185,9 +189,9 @@ function AddFood() {
       let body: Record<string, string>
       if (tab === 'photo' && imageFile) {
         const base64 = await toBase64(imageFile)
-        body = { imageBase64: base64, mimeType: imageFile.type, description }
+        body = { imageBase64: base64, mimeType: imageFile.type, description, locale }
       } else {
-        body = { text }
+        body = { text, locale }
       }
 
       const res = await fetch('/api/analyze-food', {
@@ -200,7 +204,7 @@ function AddFood() {
 
       if (!data.valid) {
         setPhase('error')
-        setValidationError(data.reason ?? "This doesn't look like food. Please try again.")
+        setValidationError(data.reason ?? t.somethingWentWrong)
         return
       }
 
@@ -209,7 +213,7 @@ function AddFood() {
 
     } catch {
       setPhase('error')
-      setValidationError('Something went wrong. Please try again.')
+      setValidationError(t.somethingWentWrong)
     }
   }
 
@@ -238,10 +242,10 @@ function AddFood() {
         .eq('id', existing.id)
 
       if (error) {
-        toast.error('Failed to update favorite')
+        toast.error(t.failedToSaveFavorite)
       } else {
         queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
-        toast.success('Favorite updated ⭐')
+        toast.success(t.favoriteUpdated)
       }
     } else {
       const { error } = await supabase
@@ -258,10 +262,10 @@ function AddFood() {
         })
 
       if (error) {
-        toast.error('Failed to save favorite')
+        toast.error(t.failedToSaveFavorite)
       } else {
         queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
-        toast.success('Added to favorites ⭐')
+        toast.success(t.addedToFavorites)
       }
     }
 
@@ -287,7 +291,7 @@ function AddFood() {
     })
 
     if (error) {
-      toast.error('Failed to log food')
+      toast.error(t.failedToLogFood)
       setLoggingFavoriteId(null)
       return
     }
@@ -299,7 +303,7 @@ function AddFood() {
 
     queryClient.invalidateQueries({ queryKey: ['food_entries'] })
     queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
-    toast.success(`${fav.name} logged!`)
+    toast.success(`${fav.name} ${t.foodLogged}`)
     router.push(`/?date=${date}`)
   }
 
@@ -307,7 +311,7 @@ function AddFood() {
     if (!user) return
     const { error } = await supabase.from('favorite_foods').delete().eq('id', id)
     if (error) {
-      toast.error('Failed to remove favorite')
+      toast.error(t.failedToRemoveFavorite)
     } else {
       queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
     }
@@ -332,10 +336,10 @@ function AddFood() {
     })
 
     if (error) {
-      toast.error('Failed to save: ' + error.message)
+      toast.error(t.failedToSave + ': ' + error.message)
     } else {
       queryClient.invalidateQueries({ queryKey: ['food_entries'] })
-      toast.success('Food logged!')
+      toast.success(t.foodLogged)
       router.push(`/?date=${date}`)
     }
     setSaving(false)
@@ -351,13 +355,13 @@ function AddFood() {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-lg font-bold text-[#F8FAFC]">Add Food</h1>
+        <h1 className="text-lg font-bold text-[#F8FAFC]">{t.addFood}</h1>
       </div>
 
       {/* Favorites */}
       {favorites.length > 0 && (
         <div className="mb-5">
-          <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Quick Add</p>
+          <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">{t.quickAdd}</p>
           <div className="space-y-2">
             {favorites.map((fav) => (
               <FavoriteFoodRow
@@ -381,7 +385,7 @@ function AddFood() {
           }`}
         >
           <FileText size={15} />
-          Text
+          {t.text}
         </button>
         <button
           onClick={() => setTab('photo')}
@@ -390,7 +394,7 @@ function AddFood() {
           }`}
         >
           <Camera size={15} />
-          Photo
+          {t.photo}
         </button>
       </div>
 
@@ -398,13 +402,13 @@ function AddFood() {
       {tab === 'text' && (
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Describe your meal</label>
+            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">{t.describeYourMeal}</label>
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={4}
               maxLength={500}
-              placeholder="e.g. 2 scrambled eggs with toast and a cup of orange juice"
+              placeholder={t.mealPlaceholder}
               className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-3 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors resize-none"
             />
             <p className={`text-xs mt-1 text-right ${text.length > 450 ? 'text-red-400' : 'text-[#64748B]'}`}>
@@ -437,7 +441,7 @@ function AddFood() {
                   onClick={() => fileInputRef.current?.click()}
                   className="absolute bottom-2 right-2 bg-[#0A0A0F]/80 backdrop-blur-sm border border-[#1E1E2E] text-[#F8FAFC] rounded-xl px-3 py-1.5 text-xs font-medium"
                 >
-                  Change
+                  {t.change}
                 </button>
               </div>
             ) : (
@@ -446,17 +450,17 @@ function AddFood() {
                 className="w-full h-40 bg-[#111118] border-2 border-dashed border-[#1E1E2E] hover:border-indigo-500/50 rounded-2xl flex flex-col items-center justify-center gap-2 transition-colors"
               >
                 <Camera size={28} className="text-[#64748B]" />
-                <span className="text-sm text-[#64748B]">Tap to take or select a photo</span>
+                <span className="text-sm text-[#64748B]">{t.tapToSelectPhoto}</span>
               </button>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Additional description (optional)</label>
+            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">{t.additionalDescription}</label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g. large portion, extra sauce"
+              placeholder={t.descriptionPlaceholder}
               className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
             />
           </div>
@@ -466,22 +470,22 @@ function AddFood() {
       {/* Quantity & Notes */}
       <div className="space-y-4 mt-4">
         <div>
-          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Quantity (optional)</label>
+          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">{t.quantity}</label>
           <input
             type="text"
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
-            placeholder="e.g. 1 plate, 200g"
+            placeholder={t.quantityPlaceholder}
             className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Notes (optional)</label>
+          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">{t.notes}</label>
           <input
             type="text"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Any additional notes"
+            placeholder={t.notesPlaceholder}
             className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
           />
         </div>
@@ -493,10 +497,10 @@ function AddFood() {
         disabled={phase === 'analyzing' || (tab === 'text' && text.length > 500)}
         className="w-full mt-5 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {phase === 'idle' && <><Sparkles size={16} /> Analyze with AI</>}
-        {phase === 'analyzing' && <>Analyzing...</>}
-        {phase === 'done' && <><Sparkles size={16} /> Re-analyze</>}
-        {phase === 'error' && <><Sparkles size={16} /> Analyze with AI</>}
+        {phase === 'idle' && <><Sparkles size={16} /> {t.analyzeWithAI}</>}
+        {phase === 'analyzing' && <>{t.analyzing}</>}
+        {phase === 'done' && <><Sparkles size={16} /> {t.reanalyze}</>}
+        {phase === 'error' && <><Sparkles size={16} /> {t.analyzeWithAI}</>}
       </button>
 
       {/* ANALYZING STATE */}
@@ -507,8 +511,8 @@ function AddFood() {
               <span className="w-5 h-5 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin block" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-[#F8FAFC]">Analyzing nutrition...</p>
-              <p className="text-xs text-[#64748B] mt-0.5">Calculating calories and macros</p>
+              <p className="text-sm font-semibold text-[#F8FAFC]">{t.analyzingNutrition}</p>
+              <p className="text-xs text-[#64748B] mt-0.5">{t.calculatingCalories}</p>
             </div>
           </div>
           <div className="space-y-2">
@@ -531,7 +535,7 @@ function AddFood() {
               <AlertCircle size={20} className="text-red-400" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-red-400 mb-1">Couldn&apos;t analyze this</p>
+              <p className="text-sm font-semibold text-red-400 mb-1">{t.couldntAnalyze}</p>
               <p className="text-sm text-[#64748B] leading-relaxed">{validationError}</p>
               <button
                 onClick={() => {
@@ -540,7 +544,7 @@ function AddFood() {
                 }}
                 className="mt-3 text-sm text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
               >
-                ← Try again
+                {t.tryAgain}
               </button>
             </div>
           </div>
@@ -553,26 +557,26 @@ function AddFood() {
           <div className="flex items-start justify-between mb-3">
             <div>
               <h3 className="font-semibold text-[#F8FAFC]">{result.name}</h3>
-              <p className="text-2xl font-bold text-[#F8FAFC] mt-1">{result.calories} <span className="text-sm font-normal text-[#64748B]">kcal</span></p>
+              <p className="text-2xl font-bold text-[#F8FAFC] mt-1">{result.calories} <span className="text-sm font-normal text-[#64748B]">{t.kcal}</span></p>
             </div>
             <ConfidenceBadge confidence={result.confidence} />
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div className="bg-[#0A0A0F] rounded-xl p-3 text-center">
-              <p className="text-xs text-[#64748B] mb-1">Protein</p>
+              <p className="text-xs text-[#64748B] mb-1">{t.protein}</p>
               <p className="font-bold text-indigo-400">{result.protein}g</p>
             </div>
             <div className="bg-[#0A0A0F] rounded-xl p-3 text-center">
-              <p className="text-xs text-[#64748B] mb-1">Carbs</p>
+              <p className="text-xs text-[#64748B] mb-1">{t.carbs}</p>
               <p className="font-bold text-emerald-400">{result.carbs}g</p>
             </div>
             <div className="bg-[#0A0A0F] rounded-xl p-3 text-center">
-              <p className="text-xs text-[#64748B] mb-1">Fat</p>
+              <p className="text-xs text-[#64748B] mb-1">{t.fat}</p>
               <p className="font-bold text-amber-400">{result.fat}g</p>
             </div>
           </div>
           {result.fiber > 0 && (
-            <p className="text-xs text-[#64748B] mt-2 text-center">Fiber: {result.fiber}g</p>
+            <p className="text-xs text-[#64748B] mt-2 text-center">{t.fiber}: {result.fiber}g</p>
           )}
           <div className="flex gap-2 mt-4">
             <button
@@ -585,12 +589,12 @@ function AddFood() {
               ) : (
                 <CheckCircle size={16} />
               )}
-              Save to diary
+              {t.saveToDiary}
             </button>
             <button
               onClick={handleSaveFavorite}
               className="flex items-center justify-center gap-1.5 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl px-3 py-2.5 font-semibold transition-colors"
-              title="Save to favorites"
+              title={t.saveToFavorites}
             >
               <Star size={16} />
             </button>

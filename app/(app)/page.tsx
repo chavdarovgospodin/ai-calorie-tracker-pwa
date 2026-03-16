@@ -14,6 +14,7 @@ import ActivityCard from '@/components/ActivityCard'
 import DateNav from '@/components/DateNav'
 import ProfileSheet from '@/components/ProfileSheet'
 import type { FoodEntry, ActivityEntry, UserProfile } from '@/lib/types'
+import { useLocale } from '@/lib/locale-context'
 
 export default function DashboardPage() {
   return (
@@ -24,6 +25,7 @@ export default function DashboardPage() {
 }
 
 function Dashboard() {
+  const { t } = useLocale()
   const router = useRouter()
   const searchParams = useSearchParams()
   const today = new Date().toLocaleDateString('en-CA')
@@ -114,20 +116,20 @@ function Dashboard() {
   async function handleDeleteFood(id: string) {
     const { error } = await supabase.from('food_entries').delete().eq('id', id)
     if (error) {
-      toast.error('Failed to delete entry')
+      toast.error(t.failedToDelete)
     } else {
       queryClient.invalidateQueries({ queryKey: ['food_entries', date] })
-      toast.success('Entry deleted')
+      toast.success(t.entryDeleted)
     }
   }
 
   async function handleDeleteActivity(id: string) {
     const { error } = await supabase.from('activity_entries').delete().eq('id', id)
     if (error) {
-      toast.error('Failed to delete activity')
+      toast.error(t.failedToDeleteActivity)
     } else {
       queryClient.invalidateQueries({ queryKey: ['activity_entries', date] })
-      toast.success('Activity deleted')
+      toast.success(t.activityDeleted)
     }
   }
 
@@ -171,21 +173,21 @@ function Dashboard() {
 
       {/* Macro Bars */}
       <div className="grid grid-cols-3 gap-3 mb-6">
-        <MacroBar label="Protein" current={totalProtein} target={proteinTarget} color="bg-indigo-500" />
-        <MacroBar label="Carbs" current={totalCarbs} target={carbsTarget} color="bg-emerald-500" />
-        <MacroBar label="Fat" current={totalFat} target={fatTarget} color="bg-amber-500" />
+        <MacroBar label={t.protein} current={totalProtein} target={proteinTarget} color="bg-indigo-500" />
+        <MacroBar label={t.carbs} current={totalCarbs} target={carbsTarget} color="bg-emerald-500" />
+        <MacroBar label={t.fat} current={totalFat} target={fatTarget} color="bg-amber-500" />
       </div>
 
       {/* Food Section */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-[#F8FAFC]">Today&apos;s Food</h2>
+          <h2 className="text-base font-semibold text-[#F8FAFC]">{t.todaysFood}</h2>
           <button
             onClick={() => router.push(`/add?date=${date}`)}
             className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors"
           >
             <Plus size={14} />
-            Add
+            {t.add}
           </button>
         </div>
         {isLoading ? (
@@ -196,12 +198,12 @@ function Dashboard() {
           </div>
         ) : foodEntries.length === 0 ? (
           <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-6 text-center">
-            <p className="text-[#64748B] text-sm">No food logged yet</p>
+            <p className="text-[#64748B] text-sm">{t.noFoodLogged}</p>
             <button
               onClick={() => router.push(`/add?date=${date}`)}
               className="mt-3 text-indigo-400 hover:text-indigo-300 text-sm font-medium"
             >
-              + Add your first meal
+              {t.addFirstMeal}
             </button>
           </div>
         ) : (
@@ -220,25 +222,25 @@ function Dashboard() {
       {/* Activity Section */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-[#F8FAFC]">Activity</h2>
+          <h2 className="text-base font-semibold text-[#F8FAFC]">{t.activity}</h2>
           <button
             onClick={() => router.push(`/activity?date=${date}`)}
             className="flex items-center gap-1.5 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-[#F8FAFC] rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors"
           >
             <Zap size={14} />
-            Log
+            {t.log}
           </button>
         </div>
         {isLoading ? (
           <div className="h-16 rounded-2xl bg-[#111118] animate-pulse" />
         ) : activityEntries.length === 0 ? (
           <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-6 text-center">
-            <p className="text-[#64748B] text-sm">No activity logged</p>
+            <p className="text-[#64748B] text-sm">{t.noActivityLogged}</p>
             <button
               onClick={() => router.push(`/activity?date=${date}`)}
               className="mt-3 text-amber-400 hover:text-amber-300 text-sm font-medium"
             >
-              + Log workout
+              {t.logWorkout}
             </button>
           </div>
         ) : (

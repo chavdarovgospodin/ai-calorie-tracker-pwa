@@ -51,7 +51,8 @@ export async function POST(request: Request) {
 
     // 2. Input validation
     const body = await request.json();
-    const { text, imageBase64, description, mimeType: rawMimeType } = body;
+    const { text, imageBase64, description, mimeType: rawMimeType, locale } = body;
+    const respondIn = locale === 'bg' ? 'Bulgarian' : 'English';
     const mimeType =
       typeof rawMimeType === 'string' && rawMimeType.startsWith('image/')
         ? rawMimeType
@@ -105,7 +106,9 @@ If VALID:
 If INVALID:
 - Set valid: false
 - Set result: null
-- Write a friendly reason in the same language as the user's input explaining what went wrong
+- Write a friendly reason in ${respondIn} explaining what went wrong
+
+Respond in ${respondIn}.
 
 Return ONLY valid JSON, no markdown:
 {
@@ -147,7 +150,9 @@ If VALID:
 If INVALID:
 - Set valid: false
 - Set result: null
-- Write a friendly reason. Match the language of any provided description, otherwise use English.
+- Write a friendly reason in ${respondIn}.
+
+Respond in ${respondIn}.
 
 Return ONLY valid JSON, no markdown:
 {

@@ -3,9 +3,11 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { House, BarChart3, Plus, Settings } from 'lucide-react'
+import { useLocale } from '@/lib/locale-context'
 
 export default function BottomNav() {
   const pathname = usePathname()
+  const { t } = useLocale()
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/'
@@ -24,7 +26,7 @@ export default function BottomNav() {
           }`}
         >
           <House size={22} />
-          <span className="text-[10px] font-medium">Home</span>
+          <span className="text-[10px] font-medium">{t.home}</span>
         </Link>
 
         <Link
@@ -34,7 +36,7 @@ export default function BottomNav() {
           }`}
         >
           <BarChart3 size={22} />
-          <span className="text-[10px] font-medium">History</span>
+          <span className="text-[10px] font-medium">{t.history}</span>
         </Link>
 
         <Link
@@ -53,7 +55,7 @@ export default function BottomNav() {
           }`}
         >
           <Settings size={22} />
-          <span className="text-[10px] font-medium">Settings</span>
+          <span className="text-[10px] font-medium">{t.settings}</span>
         </Link>
       </div>
     </nav>

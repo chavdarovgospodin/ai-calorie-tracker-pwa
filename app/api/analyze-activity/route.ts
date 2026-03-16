@@ -50,7 +50,8 @@ export async function POST(request: Request) {
 
     // 2. Input validation
     const body = await request.json();
-    const { text, weightKg: rawWeight } = body;
+    const { text, weightKg: rawWeight, locale } = body;
+    const respondIn = locale === 'bg' ? 'Bulgarian' : 'English';
 
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
@@ -97,7 +98,9 @@ If INVALID:
 - Set valid: false
 - Set result: null
 - Set error_type to the appropriate category
-- Write a friendly reason in the same language as the user's input
+- Write a friendly reason in ${respondIn}
+
+Respond in ${respondIn}.
 
 Return ONLY valid JSON, no markdown:
 {
