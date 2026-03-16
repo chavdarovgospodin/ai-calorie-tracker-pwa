@@ -12,6 +12,8 @@ export default function BottomNav() {
     return pathname.startsWith(href)
   }
 
+  if (pathname === '/onboarding') return null
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#0A0A0F]/90 border-t border-[#1E1E2E]">
       <div className="max-w-[430px] mx-auto flex items-center justify-around px-2 h-16">

@@ -56,7 +56,9 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
       : null
 
   return (
-    <div className="min-h-screen bg-[#0A0A0F] flex flex-col p-5">
+    <div className="min-h-screen bg-[#0A0A0F] flex flex-col">
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto px-5 pt-5 pb-4">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-black bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
@@ -80,7 +82,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
       </div>
 
       {/* Steps */}
-      <div className="flex-1">
+      <div>
         {/* Step 0: Gender */}
         {currentStep === 0 && (
           <div>
@@ -222,24 +224,27 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
           </div>
         )}
       </div>
+      </div>{/* end scrollable */}
 
-      {/* Navigation buttons */}
-      <div className="flex gap-3 mt-8">
-        {currentStep > 0 && (
+      {/* Sticky navigation buttons */}
+      <div className="sticky bottom-0 bg-[#0A0A0F] border-t border-[#1E1E2E] px-5 py-4">
+        <div className="flex gap-3">
+          {currentStep > 0 && (
+            <button
+              onClick={() => setCurrentStep((s) => s - 1)}
+              className="flex-1 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-[#F8FAFC] rounded-xl px-5 py-2.5 font-semibold transition-colors"
+            >
+              Back
+            </button>
+          )}
           <button
-            onClick={() => setCurrentStep((s) => s - 1)}
-            className="flex-1 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-[#F8FAFC] rounded-xl px-5 py-2.5 font-semibold transition-colors"
+            onClick={handleNext}
+            disabled={!isStepComplete()}
+            className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Back
+            {currentStep === totalSteps - 1 ? 'Start Tracking' : 'Next'}
           </button>
-        )}
-        <button
-          onClick={handleNext}
-          disabled={!isStepComplete()}
-          className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {currentStep === totalSteps - 1 ? 'Start Tracking' : 'Next'}
-        </button>
+        </div>
       </div>
     </div>
   )

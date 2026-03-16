@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { saveLastUser, getLastUser } from '@/lib/lastUser'
+import { saveLastUser, getLastUser, hasLoggedInBefore } from '@/lib/lastUser'
 import { toast } from 'sonner'
 
 export default function LoginPage() {
@@ -32,8 +32,11 @@ function LoginForm() {
 
   const supabase = useMemo(() => createClient(), [])
 
+  const [hasPreviousLogin, setHasPreviousLogin] = useState(false)
+
   useEffect(() => {
     setLastUser(getLastUser())
+    setHasPreviousLogin(hasLoggedInBefore())
   }, [])
 
   async function handleGoogleLogin() {
@@ -104,9 +107,11 @@ function LoginForm() {
           {/* Continue as last user */}
           {lastUser && (
             <div className="mb-5">
-              <p className="text-xs text-[#64748B] text-center mb-3">
-                Welcome back
-              </p>
+              {hasPreviousLogin && (
+                <p className="text-xs text-[#64748B] text-center mb-3">
+                  Welcome back
+                </p>
+              )}
               <button
                 onClick={handleContinueAsLastUser}
                 className="w-full flex items-center gap-3 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-indigo-500/30 rounded-xl px-4 py-3 transition-colors"
