@@ -68,7 +68,19 @@ function LoginForm() {
   async function handleContinueAsLastUser() {
     if (!lastUser) return
     if (lastUser.provider === 'google') {
-      handleGoogleLogin()
+      setGoogleLoading(true)
+      setError('')
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: { login_hint: lastUser.email },
+        },
+      })
+      if (error) {
+        setError(error.message)
+        setGoogleLoading(false)
+      }
     } else {
       setEmail(lastUser.email)
       setTimeout(() => {
