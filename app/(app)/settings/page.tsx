@@ -59,6 +59,15 @@ export default function SettingsPage() {
 
   const isLoading = !user || !profileData
 
+  const hasChanges = profileData
+    ? age !== String(profileData.age) ||
+      weight !== String(profileData.weight) ||
+      height !== String(profileData.height) ||
+      gender !== profileData.gender ||
+      goal !== profileData.goal ||
+      activityLevel !== profileData.activity_level
+    : false
+
   const ageNum = Number(age)
   const weightNum = Number(weight)
   const heightNum = Number(height)
@@ -234,8 +243,8 @@ export default function SettingsPage() {
 
         <button
           onClick={handleSave}
-          disabled={saving}
-          className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50"
+          disabled={saving || !hasChanges}
+          className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? (
             <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
