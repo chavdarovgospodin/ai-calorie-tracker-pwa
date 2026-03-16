@@ -8,7 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { FoodAnalysis, FavoriteFood } from '@/lib/types'
 
-type AnalysisPhase = 'idle' | 'validating' | 'analyzing' | 'done' | 'error'
+type AnalysisPhase = 'idle' | 'analyzing' | 'done' | 'error'
 
 async function toBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -177,56 +177,34 @@ function AddFood() {
       return
     }
 
-    setPhase('validating')
+    setPhase('analyzing')
     setValidationError(null)
     setResult(null)
 
     try {
-      let cachedBase64: string | null = null
-      if (tab === 'photo' && imageFile) {
-        cachedBase64 = await toBase64(imageFile)
-      }
-
       let body: Record<string, string>
-      if (tab === 'photo' && cachedBase64) {
-        body = { imageBase64: cachedBase64, mimeType: imageFile!.type, description }
+      if (tab === 'photo' && imageFile) {
+        const base64 = await toBase64(imageFile)
+        body = { imageBase64: base64, mimeType: imageFile.type, description }
       } else {
         body = { text }
       }
 
-      const validateRes = await fetch('/api/validate-food', {
+      const res = await fetch('/api/analyze-food', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      if (!validateRes.ok) throw new Error('Validation request failed')
-      const validation = await validateRes.json()
+      if (!res.ok) throw new Error('Analysis failed')
+      const data = await res.json()
 
-      if (!validation.valid) {
+      if (!data.valid) {
         setPhase('error')
-        setValidationError(validation.reason ?? "This doesn't look like food. Please try again.")
+        setValidationError(data.reason ?? "This doesn't look like food. Please try again.")
         return
       }
 
-      setPhase('analyzing')
-
-      const analyzeBody: Record<string, string> = {
-        enrichedPrompt: validation.enriched_prompt,
-      }
-      if (tab === 'photo' && cachedBase64) {
-        analyzeBody.imageBase64 = cachedBase64
-        analyzeBody.mimeType = imageFile!.type
-      }
-
-      const analyzeRes = await fetch('/api/analyze-food', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(analyzeBody),
-      })
-      if (!analyzeRes.ok) throw new Error('Analysis failed')
-      const data = await analyzeRes.json()
-
-      setResult(data)
+      setResult(data.result)
       setPhase('done')
 
     } catch {
@@ -512,28 +490,14 @@ function AddFood() {
       {/* Analyze Button */}
       <button
         onClick={handleAnalyze}
-        disabled={phase === 'validating' || phase === 'analyzing' || (tab === 'text' && text.length > 500)}
+        disabled={phase === 'analyzing' || (tab === 'text' && text.length > 500)}
         className="w-full mt-5 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {phase === 'idle' && <><Sparkles size={16} /> Analyze with AI</>}
-        {phase === 'validating' && <>Checking...</>}
         {phase === 'analyzing' && <>Analyzing...</>}
         {phase === 'done' && <><Sparkles size={16} /> Re-analyze</>}
         {phase === 'error' && <><Sparkles size={16} /> Analyze with AI</>}
       </button>
-
-      {/* VALIDATING STATE */}
-      {phase === 'validating' && (
-        <div className="mt-5 bg-[#111118] border border-[#1E1E2E] rounded-2xl p-5 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-indigo-600/20 flex items-center justify-center flex-shrink-0">
-            <span className="w-5 h-5 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin block" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-[#F8FAFC]">Checking your input...</p>
-            <p className="text-xs text-[#64748B] mt-0.5">Making sure this is food we can analyze</p>
-          </div>
-        </div>
-      )}
 
       {/* ANALYZING STATE */}
       {phase === 'analyzing' && (

@@ -4,11 +4,21 @@ import { z } from 'zod';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-const ActivitySchema = z.object({
-  activityName: z.string(),
-  caloriesBurned: z.number(),
-  durationMinutes: z.number(),
-  confidence: z.number().min(0).max(1),
+const ActivityResultSchema = z.object({
+  valid: z.boolean(),
+  reason: z.string().nullable(),
+  error_type: z
+    .enum(['not_an_activity', 'too_vague', 'other'])
+    .nullable()
+    .optional(),
+  result: z
+    .object({
+      activityName: z.string(),
+      caloriesBurned: z.number(),
+      durationMinutes: z.number(),
+      confidence: z.number().min(0).max(1),
+    })
+    .nullable(),
 });
 
 export async function POST(request: Request) {
@@ -31,7 +41,6 @@ export async function POST(request: Request) {
         },
       },
     );
-
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -41,18 +50,13 @@ export async function POST(request: Request) {
 
     // 2. Input validation
     const body = await request.json();
-    const { enrichedPrompt, weightKg: rawWeight } = body;
+    const { text, weightKg: rawWeight } = body;
 
-    if (!enrichedPrompt || typeof enrichedPrompt !== 'string') {
-      return NextResponse.json(
-        { error: 'enrichedPrompt is required' },
-        { status: 400 },
-      );
+    if (!text || typeof text !== 'string' || text.trim().length === 0) {
+      return NextResponse.json({ error: 'Text is required' }, { status: 400 });
     }
-
-    const MAX_ENRICHED_LENGTH = 2000;
-    if (enrichedPrompt.length > MAX_ENRICHED_LENGTH) {
-      return NextResponse.json({ error: 'Prompt too long' }, { status: 400 });
+    if (text.length > 500) {
+      return NextResponse.json({ error: 'Text too long' }, { status: 400 });
     }
 
     const weightKg =
@@ -63,36 +67,62 @@ export async function POST(request: Request) {
         ? Math.round(rawWeight)
         : 70;
 
-    // 3. Gemini analysis
+    // 3. Gemini single-call validate + analyze
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    const prompt = `You are a precise physical activity analyzer for a calorie tracking app.
+    const prompt = `You are a physical activity analyzer for a calorie tracking app. Your job is to:
+1. Determine if the input describes a physical activity that can have calories burned estimated
+2. If valid activity: calculate calories burned
+3. If not valid: explain why
 
-${enrichedPrompt}
-
+User input: <activity_input>${text}</activity_input>
 User weight: ${weightKg}kg
 
-Based on the above activity description, estimate calories burned.
-Use MET (Metabolic Equivalent of Task) values for accuracy.
-Consider the user's weight in all calculations.
-Be realistic — don't overestimate.
+Validation rules:
+- Valid: any exercise, sport, physical activity, movement (running, walking, cycling, swimming, gym, yoga, dancing, hiking, cleaning, gardening, etc.)
+- Valid: step counts ("10,000 steps", "walked 5km")
+- Valid: vague but physical activities ("played with my kids for 1 hour", "stood all day at work")
+- Invalid: sedentary activities (watching TV, reading, sleeping, sitting, driving) → error_type: "not_an_activity"
+- Invalid: non-activity text (greetings, food descriptions, random text) → error_type: "not_an_activity"
+- Invalid: too vague to estimate ("did some stuff", "was active today") → error_type: "too_vague"
+
+If VALID:
+- Use MET (Metabolic Equivalent of Task) values for accuracy
+- Consider the user's weight in all calculations
+- Be realistic — don't overestimate
+- Set valid: true and populate result
+
+If INVALID:
+- Set valid: false
+- Set result: null
+- Set error_type to the appropriate category
+- Write a friendly reason in the same language as the user's input
 
 Return ONLY valid JSON, no markdown:
-{"activityName":"string","caloriesBurned":number,"durationMinutes":number,"confidence":0.0-1.0}
-
-confidence reflects how certain you are (1.0 = clear activity with duration and intensity, 0.5 = estimated duration or intensity)`;
+{
+  "valid": boolean,
+  "reason": string | null,
+  "error_type": "not_an_activity" | "too_vague" | "other" | null,
+  "result": {
+    "activityName": "string",
+    "caloriesBurned": number,
+    "durationMinutes": number,
+    "confidence": 0.0-1.0
+  } | null
+}`;
 
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Gemini timeout')), 20000),
+      setTimeout(() => reject(new Error('Gemini timeout')), 25000),
     );
-    const result = await Promise.race([
+    const geminiResult = await Promise.race([
       model.generateContent(prompt),
       timeoutPromise,
     ]);
-    const text = result.response.text().trim();
-    const jsonStr = text.replace(/```json\n?|\n?```/g, '').trim();
-    const parsed = ActivitySchema.parse(JSON.parse(jsonStr));
+
+    const responseText = geminiResult.response.text().trim();
+    const jsonStr = responseText.replace(/```json\n?|\n?```/g, '').trim();
+    const parsed = ActivityResultSchema.parse(JSON.parse(jsonStr));
     return NextResponse.json(parsed);
   } catch (e) {
     console.error(e);

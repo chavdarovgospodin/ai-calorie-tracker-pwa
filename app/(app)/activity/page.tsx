@@ -103,7 +103,7 @@ function AddActivity() {
   const date = searchParams.get('date') ?? new Date().toLocaleDateString('en-CA')
   const [description, setDescription] = useState('')
   const [notes, setNotes] = useState('')
-  const [phase, setPhase] = useState<'idle' | 'validating' | 'analyzing' | 'done' | 'error'>('idle')
+  const [phase, setPhase] = useState<'idle' | 'analyzing' | 'done' | 'error'>('idle')
   const [validationError, setValidationError] = useState<string | null>(null)
   const [result, setResult] = useState<ActivityAnalysis | null>(null)
   const [saving, setSaving] = useState(false)
@@ -218,42 +218,32 @@ function AddActivity() {
       return
     }
 
-    setPhase('validating')
+    setPhase('analyzing')
     setValidationError(null)
     setResult(null)
 
     try {
-      const validateRes = await fetch('/api/validate-activity', {
+      const res = await fetch('/api/analyze-activity', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: description }),
+        body: JSON.stringify({ text: description, weightKg }),
       })
-      if (!validateRes.ok) throw new Error('Validation failed')
-      const validation = await validateRes.json()
+      if (!res.ok) throw new Error('Analysis failed')
+      const data = await res.json()
 
-      if (!validation.valid) {
+      if (!data.valid) {
         setPhase('error')
-        if (validation.error_type === 'not_an_activity') {
+        if (data.error_type === 'not_an_activity') {
           setValidationError("This doesn't look like a physical activity. Please describe a workout, sport, or exercise.")
-        } else if (validation.error_type === 'too_vague') {
+        } else if (data.error_type === 'too_vague') {
           setValidationError('Please be more specific about your activity.')
         } else {
-          setValidationError(validation.reason ?? "This doesn't look like a physical activity. Please try again.")
+          setValidationError(data.reason ?? "This doesn't look like a physical activity. Please try again.")
         }
         return
       }
 
-      setPhase('analyzing')
-
-      const analyzeRes = await fetch('/api/analyze-activity', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enrichedPrompt: validation.enriched_prompt, weightKg }),
-      })
-      if (!analyzeRes.ok) throw new Error('Analysis failed')
-      const data = await analyzeRes.json()
-
-      setResult(data)
+      setResult(data.result)
       setPhase('done')
 
     } catch {
@@ -346,28 +336,14 @@ function AddActivity() {
       {/* Analyze Button */}
       <button
         onClick={handleAnalyze}
-        disabled={phase === 'validating' || phase === 'analyzing' || description.length > 500}
+        disabled={phase === 'analyzing' || description.length > 500}
         className="w-full mt-5 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {phase === 'idle' && <><Sparkles size={16} /> Analyze with AI</>}
-        {phase === 'validating' && <>Checking...</>}
         {phase === 'analyzing' && <>Analyzing...</>}
         {phase === 'done' && <><Sparkles size={16} /> Re-analyze</>}
         {phase === 'error' && <><Sparkles size={16} /> Analyze with AI</>}
       </button>
-
-      {/* VALIDATING STATE */}
-      {phase === 'validating' && (
-        <div className="mt-5 bg-[#111118] border border-[#1E1E2E] rounded-2xl p-5 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-indigo-600/20 flex items-center justify-center flex-shrink-0">
-            <span className="w-5 h-5 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin block" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-[#F8FAFC]">Checking your activity...</p>
-            <p className="text-xs text-[#64748B] mt-0.5">Making sure we can calculate this</p>
-          </div>
-        </div>
-      )}
 
       {/* ANALYZING STATE */}
       {phase === 'analyzing' && (

@@ -4,14 +4,20 @@ import { z } from 'zod';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-const FoodSchema = z.object({
-  name: z.string(),
-  calories: z.number(),
-  protein: z.number(),
-  carbs: z.number(),
-  fat: z.number(),
-  fiber: z.number(),
-  confidence: z.number().min(0).max(1),
+const FoodResultSchema = z.object({
+  valid: z.boolean(),
+  reason: z.string().nullable(),
+  result: z
+    .object({
+      name: z.string(),
+      calories: z.number(),
+      protein: z.number(),
+      carbs: z.number(),
+      fat: z.number(),
+      fiber: z.number(),
+      confidence: z.number().min(0).max(1),
+    })
+    .nullable(),
 });
 
 const MAX_BASE64_LENGTH = Math.ceil((5 * 1024 * 1024 * 4) / 3);
@@ -36,7 +42,6 @@ export async function POST(request: Request) {
         },
       },
     );
-
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -46,24 +51,15 @@ export async function POST(request: Request) {
 
     // 2. Input validation
     const body = await request.json();
-    const { enrichedPrompt, imageBase64, mimeType: rawMimeType } = body;
+    const { text, imageBase64, description, mimeType: rawMimeType } = body;
     const mimeType =
       typeof rawMimeType === 'string' && rawMimeType.startsWith('image/')
         ? rawMimeType
         : 'image/jpeg';
 
-    if (!enrichedPrompt || typeof enrichedPrompt !== 'string') {
-      return NextResponse.json(
-        { error: 'enrichedPrompt is required' },
-        { status: 400 },
-      );
+    if (body.text && typeof body.text === 'string' && body.text.length > 500) {
+      return NextResponse.json({ error: 'Text too long' }, { status: 400 });
     }
-
-    const MAX_ENRICHED_LENGTH = 2000;
-    if (enrichedPrompt.length > MAX_ENRICHED_LENGTH) {
-      return NextResponse.json({ error: 'Prompt too long' }, { status: 400 });
-    }
-
     if (imageBase64) {
       if (typeof imageBase64 !== 'string') {
         return NextResponse.json({ error: 'Invalid image' }, { status: 400 });
@@ -75,45 +71,124 @@ export async function POST(request: Request) {
         );
       }
     }
+    if (!text && !imageBase64) {
+      return NextResponse.json(
+        { error: 'Text or image is required' },
+        { status: 400 },
+      );
+    }
 
-    // 3. Gemini analysis
+    // 3. Gemini single-call validate + analyze
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    const prompt = `You are a precise nutritional analyzer for a calorie tracking app.
+    const textPrompt = `You are a food analyzer for a calorie tracking app. Your job is to:
+1. Determine if the input describes food, a meal, a drink, or ingredients
+2. If valid food: analyze the nutritional content
+3. If not valid food: explain why
 
-${enrichedPrompt}
+User input: <food_input>${text}</food_input>
 
-Based on the above food description, provide accurate nutritional information.
-Be realistic with estimates. If quantities are approximate, use typical serving sizes.
+Validation rules:
+- Valid: any food, meal, drink, ingredient, or combination (even if vague quantities)
+- Valid: water, coffee, tea, alcohol (macros may be near zero)
+- Valid: menu items, product names, cuisine types
+- Invalid: non-food text (greetings, questions, random text, emotions)
+- Invalid: too vague to analyze ("something tasty", "a little bit of food")
+- Invalid: non-food objects or activities
+
+If VALID:
+- Estimate nutritional values accurately
+- Use standard portion sizes if quantities not specified
+- Set valid: true and populate result
+
+If INVALID:
+- Set valid: false
+- Set result: null
+- Write a friendly reason in the same language as the user's input explaining what went wrong
 
 Return ONLY valid JSON, no markdown:
-{"name":"string","calories":number,"protein":number,"carbs":number,"fat":number,"fiber":number,"confidence":0.0-1.0}
+{
+  "valid": boolean,
+  "reason": string | null,
+  "result": {
+    "name": "string",
+    "calories": number,
+    "protein": number,
+    "carbs": number,
+    "fat": number,
+    "fiber": number,
+    "confidence": 0.0-1.0
+  } | null
+}`;
 
-confidence reflects how certain you are about the nutritional values (1.0 = exact data available, 0.5 = rough estimate)`;
+    const descriptionStr =
+      typeof description === 'string' ? description.slice(0, 200) : '';
+
+    const imagePrompt = `You are a food image analyzer for a calorie tracking app. Your job is to:
+1. Determine if the image shows food, a meal, a drink, ingredients, a food menu, or food packaging
+2. If valid food image: analyze the nutritional content
+3. If not valid: explain why
+
+${descriptionStr ? `User also provided this description: <description>${descriptionStr}</description>` : ''}
+
+Validation rules:
+- Valid: any food, meal, drink, ingredients, restaurant menus, food packaging/labels
+- Valid: partially eaten meals, messy plates
+- Invalid: non-food objects (cars, people, animals, landscapes, etc.)
+- Invalid: image too dark, blurry, or unclear to identify contents
+- Invalid: empty plates with no food
+
+If VALID:
+- Describe what you see and estimate nutritional content
+- Use visual cues (plate size, context) to estimate portions
+- Set valid: true and populate result
+
+If INVALID:
+- Set valid: false
+- Set result: null
+- Write a friendly reason. Match the language of any provided description, otherwise use English.
+
+Return ONLY valid JSON, no markdown:
+{
+  "valid": boolean,
+  "reason": string | null,
+  "result": {
+    "name": "string",
+    "calories": number,
+    "protein": number,
+    "carbs": number,
+    "fat": number,
+    "fiber": number,
+    "confidence": 0.0-1.0
+  } | null
+}`;
+
+    const prompt = imageBase64 ? imagePrompt : textPrompt;
 
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Gemini timeout')), 20000),
+      setTimeout(() => reject(new Error('Gemini timeout')), 25000),
     );
-    let result;
+
+    let geminiResult;
     if (imageBase64) {
-      result = await Promise.race([
+      geminiResult = await Promise.race([
         model.generateContent([
           prompt,
-          { inlineData: { mimeType: mimeType, data: imageBase64 } },
+          { inlineData: { mimeType, data: imageBase64 } },
         ]),
         timeoutPromise,
       ]);
     } else {
-      result = await Promise.race([
+      geminiResult = await Promise.race([
         model.generateContent(prompt),
         timeoutPromise,
       ]);
     }
 
-    const text = result.response.text().trim();
-    const jsonStr = text.replace(/```json\n?|\n?```/g, '').trim();
-    const parsed = FoodSchema.parse(JSON.parse(jsonStr));
+    const responseText = geminiResult.response.text().trim();
+    const jsonStr = responseText.replace(/```json\n?|\n?```/g, '').trim();
+    const parsed = FoodResultSchema.parse(JSON.parse(jsonStr));
     return NextResponse.json(parsed);
   } catch (e) {
     console.error(e);
