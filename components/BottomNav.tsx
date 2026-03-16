@@ -24,7 +24,7 @@ export default function BottomNav() {
           }`}
         >
           <House size={22} />
-          <span className="text-[10px] font-medium">Начало</span>
+          <span className="text-[10px] font-medium">Home</span>
         </Link>
 
         <Link
@@ -34,7 +34,7 @@ export default function BottomNav() {
           }`}
         >
           <BarChart3 size={22} />
-          <span className="text-[10px] font-medium">История</span>
+          <span className="text-[10px] font-medium">History</span>
         </Link>
 
         <Link
@@ -53,7 +53,7 @@ export default function BottomNav() {
           }`}
         >
           <Settings size={22} />
-          <span className="text-[10px] font-medium">Настройки</span>
+          <span className="text-[10px] font-medium">Settings</span>
         </Link>
       </div>
     </nav>

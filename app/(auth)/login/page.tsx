@@ -20,7 +20,7 @@ function LoginForm() {
   const searchParams = useSearchParams()
   useEffect(() => {
     if (searchParams.get('error') === 'auth_failed') {
-      toast.error('Неуспешно влизане. Опитай отново.')
+      toast.error('Authentication failed. Please try again.')
     }
   }, [searchParams])
   const [email, setEmail] = useState('')
@@ -62,7 +62,7 @@ function LoginForm() {
       setLoading(false)
     } else {
       saveLastUser(email, 'email')
-      toast.success('Добре дошъл!')
+      toast.success('Welcome back!')
       router.push('/')
       router.refresh()
     }
@@ -100,7 +100,7 @@ function LoginForm() {
           <h1 className="text-4xl font-black bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
             CALIO
           </h1>
-          <p className="text-[#64748B] mt-2 text-sm">Проследявай по-умно. Яж по-добре.</p>
+          <p className="text-[#64748B] mt-2 text-sm">Track smarter. Eat better.</p>
         </div>
 
         <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-6">
@@ -109,7 +109,7 @@ function LoginForm() {
             <div className="mb-5">
               {hasPreviousLogin && (
                 <p className="text-xs text-[#64748B] text-center mb-3">
-                  Добре дошъл
+                  Welcome back
                 </p>
               )}
               <button
@@ -124,18 +124,18 @@ function LoginForm() {
                     {lastUser.email}
                   </p>
                   <p className="text-xs text-[#64748B]">
-                    {lastUser.provider === 'google' ? 'Продължи с Google' : 'Продължи с парола'}
+                    {lastUser.provider === 'google' ? 'Continue with Google' : 'Continue with password'}
                   </p>
                 </div>
                 <div className="text-indigo-400 text-xs font-medium">
-                  Натисни за вход →
+                  Tap to sign in →
                 </div>
               </button>
               <button
                 onClick={() => setLastUser(null)}
                 className="w-full text-center text-xs text-[#64748B] hover:text-[#F8FAFC] mt-2 py-1 transition-colors"
               >
-                Използвай друг акаунт
+                Use a different account
               </button>
             </div>
           )}
@@ -156,20 +156,20 @@ function LoginForm() {
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
             )}
-            Влез с Google
+            Continue with Google
           </button>
 
           {/* Divider */}
           <div className="flex items-center gap-3 my-5">
             <div className="flex-1 h-px bg-[#1E1E2E]" />
-            <span className="text-xs text-[#64748B]">или продължи с имейл</span>
+            <span className="text-xs text-[#64748B]">or continue with email</span>
             <div className="flex-1 h-px bg-[#1E1E2E]" />
           </div>
 
           {/* Email form */}
           <form onSubmit={handleEmailLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Имейл</label>
+              <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Email</label>
               <input
                 type="email"
                 value={email}
@@ -181,7 +181,7 @@ function LoginForm() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Парола</label>
+              <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Password</label>
               <input
                 id="password-input"
                 type="password"
@@ -207,14 +207,14 @@ function LoginForm() {
               {loading && (
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
-              Влез
+              Sign In
             </button>
           </form>
 
           <p className="text-center text-sm text-[#64748B] mt-5">
-            Нямаш акаунт?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/register" className="text-indigo-400 hover:text-indigo-300 font-medium">
-              Регистрирай се
+              Register
             </Link>
           </p>
         </div>

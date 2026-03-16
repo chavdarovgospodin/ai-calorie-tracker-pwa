@@ -17,7 +17,7 @@ export default function OnboardingPage() {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      toast.error('Не си влязъл в акаунта')
+      toast.error('Not authenticated')
       router.push('/login')
       return
     }
@@ -32,9 +32,9 @@ export default function OnboardingPage() {
     })
 
     if (error) {
-      toast.error('Грешка при запазване на профила: ' + error.message)
+      toast.error('Failed to save profile: ' + error.message)
     } else {
-      toast.success('Профилът е запазен! Добре дошъл в Calio 🎉')
+      toast.success('Profile saved! Welcome to Calio 🎉')
       router.push('/')
       router.refresh()
     }

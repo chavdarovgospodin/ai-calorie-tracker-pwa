@@ -23,20 +23,20 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
   if (confidence >= 0.8) {
     return (
       <span className="flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">
-        <CheckCircle size={10} /> Висока увереност
+        <CheckCircle size={10} /> High confidence
       </span>
     )
   }
   if (confidence >= 0.6) {
     return (
       <span className="flex items-center gap-1 text-xs font-medium text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
-        <AlertCircle size={10} /> Средна увереност
+        <AlertCircle size={10} /> Medium confidence
       </span>
     )
   }
   return (
     <span className="flex items-center gap-1 text-xs font-medium text-red-400 bg-red-400/10 px-2 py-0.5 rounded-full">
-      <AlertCircle size={10} /> Ниска увереност
+      <AlertCircle size={10} /> Low confidence
     </span>
   )
 }
@@ -169,11 +169,11 @@ function AddFood() {
 
   async function handleAnalyze() {
     if (tab === 'text' && !text.trim()) {
-      toast.error('Моля опиши яденето си')
+      toast.error('Please describe your meal')
       return
     }
     if (tab === 'photo' && !imageFile) {
-      toast.error('Моля избери снимка')
+      toast.error('Please select a photo')
       return
     }
 
@@ -200,7 +200,7 @@ function AddFood() {
 
       if (!data.valid) {
         setPhase('error')
-        setValidationError(data.reason ?? 'Това не изглежда като храна. Опитай отново.')
+        setValidationError(data.reason ?? "This doesn't look like food. Please try again.")
         return
       }
 
@@ -209,7 +209,7 @@ function AddFood() {
 
     } catch {
       setPhase('error')
-      setValidationError('Нещо се обърка. Опитай отново.')
+      setValidationError('Something went wrong. Please try again.')
     }
   }
 
@@ -238,10 +238,10 @@ function AddFood() {
         .eq('id', existing.id)
 
       if (error) {
-        toast.error('Грешка при запазване в любими')
+        toast.error('Failed to update favorite')
       } else {
         queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
-        toast.success('Любимото е обновено ⭐')
+        toast.success('Favorite updated ⭐')
       }
     } else {
       const { error } = await supabase
@@ -258,10 +258,10 @@ function AddFood() {
         })
 
       if (error) {
-        toast.error('Грешка при запазване в любими')
+        toast.error('Failed to save favorite')
       } else {
         queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
-        toast.success('Добавено в любими ⭐')
+        toast.success('Added to favorites ⭐')
       }
     }
 
@@ -287,7 +287,7 @@ function AddFood() {
     })
 
     if (error) {
-      toast.error('Грешка при добавяне')
+      toast.error('Failed to log food')
       setLoggingFavoriteId(null)
       return
     }
@@ -299,7 +299,7 @@ function AddFood() {
 
     queryClient.invalidateQueries({ queryKey: ['food_entries'] })
     queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
-    toast.success(`${fav.name} добавено!`)
+    toast.success(`${fav.name} logged!`)
     router.push(`/?date=${date}`)
   }
 
@@ -307,7 +307,7 @@ function AddFood() {
     if (!user) return
     const { error } = await supabase.from('favorite_foods').delete().eq('id', id)
     if (error) {
-      toast.error('Грешка при премахване от любими')
+      toast.error('Failed to remove favorite')
     } else {
       queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
     }
@@ -332,10 +332,10 @@ function AddFood() {
     })
 
     if (error) {
-      toast.error('Грешка при запазване: ' + error.message)
+      toast.error('Failed to save: ' + error.message)
     } else {
       queryClient.invalidateQueries({ queryKey: ['food_entries'] })
-      toast.success('Храната е добавена!')
+      toast.success('Food logged!')
       router.push(`/?date=${date}`)
     }
     setSaving(false)
@@ -351,13 +351,13 @@ function AddFood() {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-lg font-bold text-[#F8FAFC]">Добави храна</h1>
+        <h1 className="text-lg font-bold text-[#F8FAFC]">Add Food</h1>
       </div>
 
       {/* Favorites */}
       {favorites.length > 0 && (
         <div className="mb-5">
-          <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Бързо добавяне</p>
+          <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-2">Quick Add</p>
           <div className="space-y-2">
             {favorites.map((fav) => (
               <FavoriteFoodRow
@@ -381,7 +381,7 @@ function AddFood() {
           }`}
         >
           <FileText size={15} />
-          Текст
+          Text
         </button>
         <button
           onClick={() => setTab('photo')}
@@ -390,7 +390,7 @@ function AddFood() {
           }`}
         >
           <Camera size={15} />
-          Снимка
+          Photo
         </button>
       </div>
 
@@ -398,13 +398,13 @@ function AddFood() {
       {tab === 'text' && (
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Опиши яденето си</label>
+            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Describe your meal</label>
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={4}
               maxLength={500}
-              placeholder="напр. 2 бъркани яйца с препечен хляб и портокалов сок"
+              placeholder="e.g. 2 scrambled eggs with toast and a cup of orange juice"
               className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-3 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors resize-none"
             />
             <p className={`text-xs mt-1 text-right ${text.length > 450 ? 'text-red-400' : 'text-[#64748B]'}`}>
@@ -437,7 +437,7 @@ function AddFood() {
                   onClick={() => fileInputRef.current?.click()}
                   className="absolute bottom-2 right-2 bg-[#0A0A0F]/80 backdrop-blur-sm border border-[#1E1E2E] text-[#F8FAFC] rounded-xl px-3 py-1.5 text-xs font-medium"
                 >
-                  Смени
+                  Change
                 </button>
               </div>
             ) : (
@@ -446,17 +446,17 @@ function AddFood() {
                 className="w-full h-40 bg-[#111118] border-2 border-dashed border-[#1E1E2E] hover:border-indigo-500/50 rounded-2xl flex flex-col items-center justify-center gap-2 transition-colors"
               >
                 <Camera size={28} className="text-[#64748B]" />
-                <span className="text-sm text-[#64748B]">Снимай или избери снимка</span>
+                <span className="text-sm text-[#64748B]">Tap to take or select a photo</span>
               </button>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Допълнително описание (по избор)</label>
+            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Additional description (optional)</label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="напр. голяма порция, допълнителен сос"
+              placeholder="e.g. large portion, extra sauce"
               className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
             />
           </div>
@@ -466,22 +466,22 @@ function AddFood() {
       {/* Quantity & Notes */}
       <div className="space-y-4 mt-4">
         <div>
-          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Количество (по избор)</label>
+          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Quantity (optional)</label>
           <input
             type="text"
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
-            placeholder="напр. 1 чиния, 200г"
+            placeholder="e.g. 1 plate, 200g"
             className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Бележки (по избор)</label>
+          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Notes (optional)</label>
           <input
             type="text"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Допълнителни бележки"
+            placeholder="Any additional notes"
             className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
           />
         </div>
@@ -493,10 +493,10 @@ function AddFood() {
         disabled={phase === 'analyzing' || (tab === 'text' && text.length > 500)}
         className="w-full mt-5 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {phase === 'idle' && <><Sparkles size={16} /> Анализирай с AI</>}
-        {phase === 'analyzing' && <>Анализира...</>}
-        {phase === 'done' && <><Sparkles size={16} /> Анализирай отново</>}
-        {phase === 'error' && <><Sparkles size={16} /> Анализирай с AI</>}
+        {phase === 'idle' && <><Sparkles size={16} /> Analyze with AI</>}
+        {phase === 'analyzing' && <>Analyzing...</>}
+        {phase === 'done' && <><Sparkles size={16} /> Re-analyze</>}
+        {phase === 'error' && <><Sparkles size={16} /> Analyze with AI</>}
       </button>
 
       {/* ANALYZING STATE */}
@@ -507,8 +507,8 @@ function AddFood() {
               <span className="w-5 h-5 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin block" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-[#F8FAFC]">Анализира хранителните стойности...</p>
-              <p className="text-xs text-[#64748B] mt-0.5">Изчислява калориите и макросите</p>
+              <p className="text-sm font-semibold text-[#F8FAFC]">Analyzing nutrition...</p>
+              <p className="text-xs text-[#64748B] mt-0.5">Calculating calories and macros</p>
             </div>
           </div>
           <div className="space-y-2">
@@ -531,7 +531,7 @@ function AddFood() {
               <AlertCircle size={20} className="text-red-400" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-red-400 mb-1">Неуспешен анализ</p>
+              <p className="text-sm font-semibold text-red-400 mb-1">Couldn&apos;t analyze this</p>
               <p className="text-sm text-[#64748B] leading-relaxed">{validationError}</p>
               <button
                 onClick={() => {
@@ -540,7 +540,7 @@ function AddFood() {
                 }}
                 className="mt-3 text-sm text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
               >
-                ← Опитай отново
+                ← Try again
               </button>
             </div>
           </div>
@@ -553,26 +553,26 @@ function AddFood() {
           <div className="flex items-start justify-between mb-3">
             <div>
               <h3 className="font-semibold text-[#F8FAFC]">{result.name}</h3>
-              <p className="text-2xl font-bold text-[#F8FAFC] mt-1">{result.calories} <span className="text-sm font-normal text-[#64748B]">ккал</span></p>
+              <p className="text-2xl font-bold text-[#F8FAFC] mt-1">{result.calories} <span className="text-sm font-normal text-[#64748B]">kcal</span></p>
             </div>
             <ConfidenceBadge confidence={result.confidence} />
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div className="bg-[#0A0A0F] rounded-xl p-3 text-center">
-              <p className="text-xs text-[#64748B] mb-1">Протеин</p>
+              <p className="text-xs text-[#64748B] mb-1">Protein</p>
               <p className="font-bold text-indigo-400">{result.protein}g</p>
             </div>
             <div className="bg-[#0A0A0F] rounded-xl p-3 text-center">
-              <p className="text-xs text-[#64748B] mb-1">Въглехидрати</p>
+              <p className="text-xs text-[#64748B] mb-1">Carbs</p>
               <p className="font-bold text-emerald-400">{result.carbs}g</p>
             </div>
             <div className="bg-[#0A0A0F] rounded-xl p-3 text-center">
-              <p className="text-xs text-[#64748B] mb-1">Мазнини</p>
+              <p className="text-xs text-[#64748B] mb-1">Fat</p>
               <p className="font-bold text-amber-400">{result.fat}g</p>
             </div>
           </div>
           {result.fiber > 0 && (
-            <p className="text-xs text-[#64748B] mt-2 text-center">Фибри: {result.fiber}г</p>
+            <p className="text-xs text-[#64748B] mt-2 text-center">Fiber: {result.fiber}g</p>
           )}
           <div className="flex gap-2 mt-4">
             <button
@@ -585,12 +585,12 @@ function AddFood() {
               ) : (
                 <CheckCircle size={16} />
               )}
-              Запази в дневника
+              Save to diary
             </button>
             <button
               onClick={handleSaveFavorite}
               className="flex items-center justify-center gap-1.5 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl px-3 py-2.5 font-semibold transition-colors"
-              title="Запази в любими"
+              title="Save to favorites"
             >
               <Star size={16} />
             </button>

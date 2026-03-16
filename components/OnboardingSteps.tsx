@@ -12,11 +12,11 @@ interface OnboardingStepsProps {
 }
 
 const activityOptions: { value: UserProfile['activity_level']; label: string; desc: string }[] = [
-  { value: 'sedentary', label: 'Заседнал', desc: 'Малко или никакво движение, офис работа' },
-  { value: 'lightly_active', label: 'Леко активен', desc: 'Леки упражнения 1-3 дни/седмица' },
-  { value: 'moderately_active', label: 'Умерено активен', desc: 'Умерени упражнения 3-5 дни/седмица' },
-  { value: 'very_active', label: 'Много активен', desc: 'Интензивни упражнения 6-7 дни/седмица' },
-  { value: 'extremely_active', label: 'Изключително активен', desc: 'Много интензивни упражнения, физическа работа' },
+  { value: 'sedentary', label: 'Sedentary', desc: 'Little or no exercise, desk job' },
+  { value: 'lightly_active', label: 'Lightly Active', desc: 'Light exercise 1-3 days/week' },
+  { value: 'moderately_active', label: 'Moderately Active', desc: 'Moderate exercise 3-5 days/week' },
+  { value: 'very_active', label: 'Very Active', desc: 'Hard exercise 6-7 days/week' },
+  { value: 'extremely_active', label: 'Extremely Active', desc: 'Very hard exercise, physical job' },
 ]
 
 export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
@@ -64,13 +64,13 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
         <h1 className="text-2xl font-black bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
           CALIO
         </h1>
-        <p className="text-[#64748B] text-sm mt-1">Нека настроим профила ти</p>
+        <p className="text-[#64748B] text-sm mt-1">Let&apos;s set up your profile</p>
       </div>
 
       {/* Progress bar */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-[#64748B]">Стъпка {currentStep + 1} от {totalSteps}</span>
+          <span className="text-xs text-[#64748B]">Step {currentStep + 1} of {totalSteps}</span>
           <span className="text-xs text-[#64748B]">{Math.round(((currentStep + 1) / totalSteps) * 100)}%</span>
         </div>
         <div className="h-1.5 rounded-full bg-[#1E1E2E]">
@@ -86,8 +86,8 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
         {/* Step 0: Gender */}
         {currentStep === 0 && (
           <div>
-            <h2 className="text-xl font-bold text-[#F8FAFC] mb-2">Какъв е твоят биологичен пол?</h2>
-            <p className="text-[#64748B] text-sm mb-6">Използва се за изчисляване на метаболизма</p>
+            <h2 className="text-xl font-bold text-[#F8FAFC] mb-2">What&apos;s your biological sex?</h2>
+            <p className="text-[#64748B] text-sm mb-6">Used to calculate your metabolic rate</p>
             <div className="grid grid-cols-2 gap-4">
               {(['male', 'female'] as const).map((g) => (
                 <button
@@ -100,7 +100,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                   }`}
                 >
                   <span className="text-4xl">{g === 'male' ? '♂' : '♀'}</span>
-                  <span className="font-semibold text-[#F8FAFC]">{g === 'male' ? 'Мъж' : 'Жена'}</span>
+                  <span className="font-semibold text-[#F8FAFC] capitalize">{g}</span>
                 </button>
               ))}
             </div>
@@ -110,11 +110,11 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
         {/* Step 1: Stats */}
         {currentStep === 1 && (
           <div>
-            <h2 className="text-xl font-bold text-[#F8FAFC] mb-2">Твоите мерки</h2>
-            <p className="text-[#64748B] text-sm mb-6">Използваме ги за изчисляване на калорийните ти нужди</p>
+            <h2 className="text-xl font-bold text-[#F8FAFC] mb-2">Your measurements</h2>
+            <p className="text-[#64748B] text-sm mb-6">We&apos;ll use these to calculate your calorie needs</p>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Възраст</label>
+                <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Age</label>
                 <input
                   type="number"
                   min={10}
@@ -126,7 +126,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Тегло (кг)</label>
+                <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Weight (kg)</label>
                 <input
                   type="number"
                   min={30}
@@ -139,7 +139,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Височина (см)</label>
+                <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">Height (cm)</label>
                 <input
                   type="number"
                   min={100}
@@ -158,13 +158,13 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
         {/* Step 2: Goal */}
         {currentStep === 2 && (
           <div>
-            <h2 className="text-xl font-bold text-[#F8FAFC] mb-2">Каква е твоята цел?</h2>
-            <p className="text-[#64748B] text-sm mb-6">Ще коригираме калорийната ти цел съответно</p>
+            <h2 className="text-xl font-bold text-[#F8FAFC] mb-2">What&apos;s your goal?</h2>
+            <p className="text-[#64748B] text-sm mb-6">We&apos;ll adjust your calorie target accordingly</p>
             <div className="space-y-3">
               {([
-                { value: 'lose' as const, label: 'Отслабване', desc: 'Дефицит от 500 ккал на ден', Icon: TrendingDown, color: 'text-blue-400' },
-                { value: 'maintain' as const, label: 'Поддържане', desc: 'Запази текущото тегло', Icon: Minus, color: 'text-indigo-400' },
-                { value: 'gain' as const, label: 'Качване на мускули', desc: 'Излишък от 300 ккал на ден', Icon: TrendingUp, color: 'text-emerald-400' },
+                { value: 'lose' as const, label: 'Lose Weight', desc: '500 kcal deficit per day', Icon: TrendingDown, color: 'text-blue-400' },
+                { value: 'maintain' as const, label: 'Maintain Weight', desc: 'Stay at current weight', Icon: Minus, color: 'text-indigo-400' },
+                { value: 'gain' as const, label: 'Gain Muscle', desc: '300 kcal surplus per day', Icon: TrendingUp, color: 'text-emerald-400' },
               ]).map(({ value, label, desc, Icon, color }) => (
                 <button
                   key={value}
@@ -191,8 +191,8 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
         {/* Step 3: Activity Level */}
         {currentStep === 3 && (
           <div>
-            <h2 className="text-xl font-bold text-[#F8FAFC] mb-2">Колко си активен?</h2>
-            <p className="text-[#64748B] text-sm mb-6">Избери типичното си седмично ниво на активност</p>
+            <h2 className="text-xl font-bold text-[#F8FAFC] mb-2">How active are you?</h2>
+            <p className="text-[#64748B] text-sm mb-6">Choose your typical weekly activity level</p>
             <div className="space-y-2">
               {activityOptions.map(({ value, label, desc }) => (
                 <button
@@ -217,8 +217,8 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
 
             {caloriePreview && (
               <div className="mt-5 p-4 rounded-2xl bg-indigo-600/10 border border-indigo-500/30">
-                <p className="text-sm text-[#64748B]">Изчислена дневна цел</p>
-                <p className="text-2xl font-bold text-indigo-400 mt-1">{caloriePreview.toLocaleString()} ккал</p>
+                <p className="text-sm text-[#64748B]">Your estimated daily target</p>
+                <p className="text-2xl font-bold text-indigo-400 mt-1">{caloriePreview.toLocaleString()} kcal</p>
               </div>
             )}
           </div>
@@ -234,7 +234,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
               onClick={() => setCurrentStep((s) => s - 1)}
               className="flex-1 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-[#F8FAFC] rounded-xl px-5 py-2.5 font-semibold transition-colors"
             >
-              Назад
+              Back
             </button>
           )}
           <button
@@ -242,7 +242,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
             disabled={!isStepComplete()}
             className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {currentStep === totalSteps - 1 ? 'Започни' : 'Напред'}
+            {currentStep === totalSteps - 1 ? 'Start Tracking' : 'Next'}
           </button>
         </div>
       </div>

@@ -40,7 +40,7 @@ export default function ActivityCard({ entry, onDelete }: ActivityCardProps) {
         )}
         <div className="flex items-center gap-1 mt-1.5">
           <Flame size={12} className="text-amber-400" />
-          <span className="text-xs text-amber-400 font-medium">{entry.calories_burned} ккал изгорени</span>
+          <span className="text-xs text-amber-400 font-medium">{entry.calories_burned} kcal burned</span>
         </div>
       </div>
 
@@ -55,7 +55,7 @@ export default function ActivityCard({ entry, onDelete }: ActivityCardProps) {
               : 'text-[#64748B] hover:text-red-400 hover:bg-red-500/10'
           }`}
         >
-          {confirmDelete ? 'Сигурен?' : <Trash2 size={15} />}
+          {confirmDelete ? 'Confirm?' : <Trash2 size={15} />}
         </button>
       </div>
     </div>

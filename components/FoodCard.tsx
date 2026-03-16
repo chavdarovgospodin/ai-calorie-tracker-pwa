@@ -71,7 +71,7 @@ export default function FoodCard({ entry, onDelete }: FoodCardProps) {
               : 'text-[#64748B] hover:text-red-400 hover:bg-red-500/10'
           }`}
         >
-          {confirmDelete ? 'Сигурен?' : <Trash2 size={15} />}
+          {confirmDelete ? 'Confirm?' : <Trash2 size={15} />}
         </button>
       </div>
     </div>

@@ -14,11 +14,11 @@ function formatDate(dateStr: string): string {
   yesterdayDate.setDate(yesterdayDate.getDate() - 1)
   const yesterday = yesterdayDate.toLocaleDateString('en-CA')
 
-  if (dateStr === today) return 'Днес'
-  if (dateStr === yesterday) return 'Вчера'
+  if (dateStr === today) return 'Today'
+  if (dateStr === yesterday) return 'Yesterday'
 
   const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('bg-BG', { weekday: 'short', month: 'short', day: 'numeric' })
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
 function addDays(dateStr: string, days: number): string {
