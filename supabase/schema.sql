@@ -72,8 +72,9 @@ CREATE TABLE IF NOT EXISTS favorite_foods (
 CREATE TABLE IF NOT EXISTS favorite_activities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  description TEXT NOT NULL,
+  name TEXT NOT NULL,
   calories_burned INTEGER NOT NULL,
+  duration_minutes INTEGER,
   use_count INTEGER NOT NULL DEFAULT 1,
   created_at TIMESTAMPTZ DEFAULT now()
 );
