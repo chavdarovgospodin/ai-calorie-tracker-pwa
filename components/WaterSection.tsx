@@ -21,7 +21,6 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
   const supabase = createClient()
   const queryClient = useQueryClient()
   const [expanded, setExpanded] = useState(false)
-  const [customMl, setCustomMl] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const confirmRef = useRef<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -70,16 +69,6 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
       queryClient.invalidateQueries({ queryKey: ['water_entries', date] })
       toast.success(t.waterLogged)
     }
-  }
-
-  async function handleCustomAdd() {
-    const ml = parseInt(customMl)
-    if (!ml || ml <= 0 || ml > 5000) {
-      toast.error(t.invalidWaterAmount)
-      return
-    }
-    await handleAdd(ml)
-    setCustomMl('')
   }
 
   async function handleDelete(id: string) {
@@ -148,25 +137,6 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
             +{ml}{t.ml}
           </button>
         ))}
-        {/* Custom ml input */}
-        <div className="flex flex-[1.4] items-center bg-[#0A0A0F] border border-[#1E1E2E] rounded-xl overflow-hidden">
-          <input
-            type="number"
-            min={1}
-            max={5000}
-            value={customMl}
-            onChange={(e) => setCustomMl(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleCustomAdd()}
-            placeholder={t.ml}
-            className="w-full bg-transparent outline-none text-[#F8FAFC] text-xs text-center px-2 py-2 placeholder-[#64748B]"
-          />
-          <button
-            onClick={handleCustomAdd}
-            className="px-2.5 py-2 text-cyan-400 bg-cyan-600/10 hover:bg-cyan-600/20 border-l border-[#1E1E2E] text-sm font-bold transition-colors"
-          >
-            +
-          </button>
-        </div>
       </div>
 
       {/* Collapsible entries */}
