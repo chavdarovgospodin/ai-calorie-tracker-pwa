@@ -164,6 +164,11 @@ export const translations = {
     today: 'Today',
     yesterday: 'Yesterday',
 
+    // Validation
+    invalidAge: 'Age must be between 10 and 120',
+    invalidWeight: 'Weight must be between 20 and 300 kg',
+    invalidHeight: 'Height must be between 100 and 250 cm',
+
     // Water
     invalidAmount: 'Enter a value between 1 and 5000 ml',
     water: 'Water',
@@ -344,6 +349,11 @@ export const translations = {
     // DateNav
     today: 'Днес',
     yesterday: 'Вчера',
+
+    // Validation
+    invalidAge: 'Въведи възраст между 10 и 120',
+    invalidWeight: 'Въведи тегло между 20 и 300 кг',
+    invalidHeight: 'Въведи височина между 100 и 250 см',
 
     // Water
     invalidAmount: 'Въведи стойност между 1 и 5000 мл',

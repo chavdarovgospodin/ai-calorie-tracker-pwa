@@ -80,7 +80,7 @@ export default function SettingsPage() {
     }
   }, [profileData]);
 
-  const isLoading = !user || !profileData;
+  const isLoading = !user || profileData === undefined;
 
   const hasChanges = profileData
     ? age !== profileData.age ||
@@ -115,7 +115,7 @@ export default function SettingsPage() {
     }
     setSaving(true);
 
-    if (!user) return;
+    if (!user) { setSaving(false); return; }
 
     const profileFields: ProfileFields = {
       age,
@@ -246,7 +246,7 @@ export default function SettingsPage() {
               max={120}
             />
             {ageStr && age === undefined && (
-              <p className="text-xs text-red-400 mt-1">Age must be between 10 and 120</p>
+              <p className="text-xs text-red-400 mt-1">{t.invalidAge}</p>
             )}
           </div>
           <div>
@@ -274,7 +274,7 @@ export default function SettingsPage() {
               step={0.1}
             />
             {weightStr && weight === undefined && (
-              <p className="text-xs text-red-400 mt-1">Weight must be between 20 and 300 kg</p>
+              <p className="text-xs text-red-400 mt-1">{t.invalidWeight}</p>
             )}
           </div>
           <div>
@@ -302,7 +302,7 @@ export default function SettingsPage() {
               step={0.1}
             />
             {heightStr && height === undefined && (
-              <p className="text-xs text-red-400 mt-1">Height must be between 100 and 250 cm</p>
+              <p className="text-xs text-red-400 mt-1">{t.invalidHeight}</p>
             )}
           </div>
         </div>

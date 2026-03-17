@@ -64,11 +64,12 @@ export default function HistoryPage() {
   const { data: earliestMonth } = useQuery<{ year: number; month: number } | null>({
     queryKey: ['earliest_month', user?.id],
     queryFn: async () => {
-      const [foodRes, activityRes] = await Promise.all([
+      const [foodRes, activityRes, waterRes] = await Promise.all([
         supabase.from('food_entries').select('date').eq('user_id', user!.id).order('date', { ascending: true }).limit(1).maybeSingle(),
         supabase.from('activity_entries').select('date').eq('user_id', user!.id).order('date', { ascending: true }).limit(1).maybeSingle(),
+        supabase.from('water_entries').select('date').eq('user_id', user!.id).order('date', { ascending: true }).limit(1).maybeSingle(),
       ])
-      const dates = [foodRes.data?.date, activityRes.data?.date].filter(Boolean) as string[]
+      const dates = [foodRes.data?.date, activityRes.data?.date, waterRes.data?.date].filter(Boolean) as string[]
       if (dates.length === 0) return null
       const earliest = dates.sort()[0]
       const d = new Date(earliest + 'T00:00:00')

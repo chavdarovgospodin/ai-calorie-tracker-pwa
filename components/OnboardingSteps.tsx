@@ -159,13 +159,13 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                     type="number"
                     inputMode="numeric"
                     min={10}
-                    max={100}
+                    max={120}
                     value={ageStr}
                     onChange={(e) => {
                       const val = e.target.value
                       setAgeStr(val)
                       const n = parseInt(val, 10)
-                      if (!isNaN(n) && n >= 10 && n <= 100) {
+                      if (!isNaN(n) && n >= 10 && n <= 120) {
                         setFormData((d) => ({ ...d, age: n }))
                       } else {
                         setFormData((d) => ({ ...d, age: undefined }))
@@ -175,7 +175,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                     className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
                   />
                   {ageStr && !formData.age && (
-                    <p className="text-xs text-red-400 mt-1">Въведи възраст между 10 и 100</p>
+                    <p className="text-xs text-red-400 mt-1">{t.invalidAge}</p>
                   )}
                 </div>
                 <div>
@@ -185,7 +185,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                   <input
                     type="number"
                     inputMode="decimal"
-                    min={30}
+                    min={20}
                     max={300}
                     step={0.1}
                     value={weightStr}
@@ -193,7 +193,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                       const val = e.target.value
                       setWeightStr(val)
                       const n = parseFloat(val)
-                      if (!isNaN(n) && n >= 30 && n <= 300) {
+                      if (!isNaN(n) && n >= 20 && n <= 300) {
                         setFormData((d) => ({ ...d, weight: n }))
                       } else {
                         setFormData((d) => ({ ...d, weight: undefined }))
@@ -203,7 +203,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                     className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
                   />
                   {weightStr && !formData.weight && (
-                    <p className="text-xs text-red-400 mt-1">Въведи тегло между 30 и 300 кг</p>
+                    <p className="text-xs text-red-400 mt-1">{t.invalidWeight}</p>
                   )}
                 </div>
                 <div>
@@ -231,7 +231,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                     className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
                   />
                   {heightStr && !formData.height && (
-                    <p className="text-xs text-red-400 mt-1">Въведи височина между 100 и 250 см</p>
+                    <p className="text-xs text-red-400 mt-1">{t.invalidHeight}</p>
                   )}
                 </div>
               </div>

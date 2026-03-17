@@ -43,10 +43,10 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
   const pct = Math.min((totalMl / dailyGoal) * 100, 100)
   const isGoalMet = totalMl >= dailyGoal
 
-  async function handleAdd(ml: number) {
+  async function handleAdd(ml: number): Promise<boolean> {
     if (!Number.isInteger(ml) || ml <= 0 || ml > 5000) {
       toast.error(t.invalidAmount)
-      return
+      return false
     }
     const { error } = await supabase.from('water_entries').insert({
       user_id: userId,
@@ -55,20 +55,21 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
     })
     if (error) {
       toast.error(t.failedToLogWater)
-    } else {
-      queryClient.invalidateQueries({ queryKey: ['water_entries', date] })
-      toast.success(t.waterLogged)
+      return false
     }
+    queryClient.invalidateQueries({ queryKey: ['water_entries', date] })
+    toast.success(t.waterLogged)
+    return true
   }
 
-  function handleCustomAdd() {
+  async function handleCustomAdd() {
     const ml = parseInt(customMl, 10)
     if (!Number.isInteger(ml) || ml <= 0 || ml > 5000) {
       toast.error(t.invalidAmount)
       return
     }
-    handleAdd(ml)
-    setCustomMl('')
+    const ok = await handleAdd(ml)
+    if (ok) setCustomMl('')
   }
 
   async function handleDelete(id: string) {
