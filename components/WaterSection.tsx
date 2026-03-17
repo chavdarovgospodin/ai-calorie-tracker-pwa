@@ -43,6 +43,10 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
   const isGoalMet = totalMl >= dailyGoal
 
   async function handleAdd(ml: number) {
+    if (ml <= 0 || ml > 5000) {
+      toast.error('Invalid amount')
+      return
+    }
     const { error } = await supabase.from('water_entries').insert({
       user_id: userId,
       date,
