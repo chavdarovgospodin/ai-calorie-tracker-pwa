@@ -165,6 +165,7 @@ export const translations = {
     yesterday: 'Yesterday',
 
     // Water
+    invalidAmount: 'Enter a value between 1 and 5000 ml',
     water: 'Water',
     waterGoal: 'Daily goal',
     addWater: 'Add water',
@@ -345,6 +346,7 @@ export const translations = {
     yesterday: 'Вчера',
 
     // Water
+    invalidAmount: 'Въведи стойност между 1 и 5000 мл',
     water: 'Вода',
     waterGoal: 'Дневна цел',
     addWater: 'Добави вода',

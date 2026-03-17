@@ -64,7 +64,7 @@ export default function SettingsPage() {
       setGender(profileData.gender);
       setGoal(profileData.goal);
       setActivityLevel(profileData.activity_level);
-      setWaterGoal(String(profileData.daily_water_goal ?? 2000));
+      setWaterGoal(String(profileData?.daily_water_goal ?? 2000));
     }
   }, [profileData]);
 
@@ -77,7 +77,7 @@ export default function SettingsPage() {
       gender !== profileData.gender ||
       goal !== profileData.goal ||
       activityLevel !== profileData.activity_level ||
-      waterGoal !== String(profileData.daily_water_goal ?? 2000)
+      waterGoal !== String(profileData?.daily_water_goal ?? 2000)
     : false;
 
   const ageNum = Number(age);

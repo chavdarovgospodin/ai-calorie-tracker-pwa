@@ -21,6 +21,7 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
   const supabase = createClient()
   const queryClient = useQueryClient()
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [customMl, setCustomMl] = useState('')
   const confirmRef = useRef<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -43,8 +44,8 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
   const isGoalMet = totalMl >= dailyGoal
 
   async function handleAdd(ml: number) {
-    if (ml <= 0 || ml > 5000) {
-      toast.error('Invalid amount')
+    if (!Number.isInteger(ml) || ml <= 0 || ml > 5000) {
+      toast.error(t.invalidAmount)
       return
     }
     const { error } = await supabase.from('water_entries').insert({
@@ -58,6 +59,16 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
       queryClient.invalidateQueries({ queryKey: ['water_entries', date] })
       toast.success(t.waterLogged)
     }
+  }
+
+  function handleCustomAdd() {
+    const ml = parseInt(customMl, 10)
+    if (!Number.isInteger(ml) || ml <= 0 || ml > 5000) {
+      toast.error(t.invalidAmount)
+      return
+    }
+    handleAdd(ml)
+    setCustomMl('')
   }
 
   async function handleDelete(id: string) {
@@ -121,6 +132,27 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
             +{ml}{t.ml}
           </button>
         ))}
+      </div>
+
+      {/* Custom amount input */}
+      <div className="flex gap-2 mb-3">
+        <input
+          type="number"
+          min={1}
+          max={5000}
+          step={10}
+          value={customMl}
+          onChange={(e) => setCustomMl(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleCustomAdd()}
+          placeholder={`Custom ${t.ml}`}
+          className="flex-1 bg-[#0A0A0F] border border-cyan-600/20 focus:border-cyan-500 rounded-xl px-3 py-2 text-sm text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
+        />
+        <button
+          onClick={handleCustomAdd}
+          className="px-4 py-2 rounded-xl text-sm font-semibold text-cyan-400 bg-cyan-600/10 hover:bg-cyan-600/20 border border-cyan-600/20 transition-colors"
+        >
+          +
+        </button>
       </div>
 
       {/* Entry list — only if there are entries */}
