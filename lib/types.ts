@@ -8,9 +8,18 @@ export interface UserProfile {
   goal: 'lose' | 'maintain' | 'gain'
   activity_level: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extremely_active'
   daily_calorie_target: number
+  daily_water_goal: number
   onboarding_completed: boolean
   created_at: string
   updated_at: string
+}
+
+export interface WaterEntry {
+  id: string
+  user_id: string
+  date: string
+  amount_ml: number
+  created_at: string
 }
 
 export interface FoodEntry {

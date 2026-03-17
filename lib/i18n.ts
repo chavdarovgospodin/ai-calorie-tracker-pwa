@@ -164,6 +164,19 @@ export const translations = {
     today: 'Today',
     yesterday: 'Yesterday',
 
+    // Water
+    water: 'Water',
+    waterGoal: 'Daily goal',
+    addWater: 'Add water',
+    waterLogged: 'Water logged!',
+    failedToLogWater: 'Failed to log water',
+    failedToDeleteWater: 'Failed to delete water entry',
+    waterDeleted: 'Water entry deleted',
+    ml: 'ml',
+    liters: 'L',
+    dailyWaterGoal: 'Daily water goal (ml)',
+    waterGoalUpdated: 'Water goal updated!',
+
     // Locale for dates
     dateLocale: 'en-US',
   },
@@ -330,6 +343,19 @@ export const translations = {
     // DateNav
     today: 'Днес',
     yesterday: 'Вчера',
+
+    // Water
+    water: 'Вода',
+    waterGoal: 'Дневна цел',
+    addWater: 'Добави вода',
+    waterLogged: 'Водата е добавена!',
+    failedToLogWater: 'Грешка при добавяне на вода',
+    failedToDeleteWater: 'Грешка при изтриване',
+    waterDeleted: 'Записът е изтрит',
+    ml: 'мл',
+    liters: 'л',
+    dailyWaterGoal: 'Дневна цел за вода (мл)',
+    waterGoalUpdated: 'Целта е обновена!',
 
     // Locale for dates
     dateLocale: 'bg-BG',

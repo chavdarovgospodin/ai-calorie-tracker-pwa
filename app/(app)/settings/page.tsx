@@ -28,6 +28,7 @@ export default function SettingsPage() {
   const [goal, setGoal] = useState<UserProfile['goal']>('maintain');
   const [activityLevel, setActivityLevel] =
     useState<UserProfile['activity_level']>('moderately_active');
+  const [waterGoal, setWaterGoal] = useState('2000');
 
   const supabase = useMemo(() => createClient(), []);
   const queryClient = useQueryClient();
@@ -63,6 +64,7 @@ export default function SettingsPage() {
       setGender(profileData.gender);
       setGoal(profileData.goal);
       setActivityLevel(profileData.activity_level);
+      setWaterGoal(String(profileData.daily_water_goal ?? 2000));
     }
   }, [profileData]);
 
@@ -74,7 +76,8 @@ export default function SettingsPage() {
       height !== String(profileData.height) ||
       gender !== profileData.gender ||
       goal !== profileData.goal ||
-      activityLevel !== profileData.activity_level
+      activityLevel !== profileData.activity_level ||
+      waterGoal !== String(profileData.daily_water_goal ?? 2000)
     : false;
 
   const ageNum = Number(age);
@@ -140,6 +143,7 @@ export default function SettingsPage() {
         user_id: user.id,
         ...profileFields,
         daily_calorie_target,
+        daily_water_goal: Number(waterGoal) || 2000,
         onboarding_completed: true,
       },
       { onConflict: 'user_id' },
@@ -318,6 +322,22 @@ export default function SettingsPage() {
             <option value="very_active">{t.veryActive}</option>
             <option value="extremely_active">{t.extremelyActive}</option>
           </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">
+            {t.dailyWaterGoal}
+          </label>
+          <input
+            type="number"
+            value={waterGoal}
+            onChange={(e) => setWaterGoal(e.target.value)}
+            className={inputClass}
+            placeholder="2000"
+            min={500}
+            max={10000}
+            step={100}
+          />
         </div>
 
         {caloriePreview && (

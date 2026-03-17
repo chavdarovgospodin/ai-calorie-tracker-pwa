@@ -12,6 +12,7 @@ interface DayData {
   date: string
   calories: number
   burned: number
+  water: number
 }
 
 function getMonthRange(year: number, month: number) {
@@ -80,20 +81,26 @@ export default function HistoryPage() {
     queryKey: ['history', year, month, user?.id],
     queryFn: async () => {
       const { start, end } = getMonthRange(year, month)
-      const [foodRes, activityRes] = await Promise.all([
+      const [foodRes, activityRes, waterRes] = await Promise.all([
         supabase.from('food_entries').select('date, calories')
           .eq('user_id', user!.id).gte('date', start).lte('date', end),
         supabase.from('activity_entries').select('date, calories_burned')
           .eq('user_id', user!.id).gte('date', start).lte('date', end),
+        supabase.from('water_entries').select('date, amount_ml')
+          .eq('user_id', user!.id).gte('date', start).lte('date', end),
       ])
       const dayMap: Record<string, DayData> = {}
       for (const entry of foodRes.data ?? []) {
-        if (!dayMap[entry.date]) dayMap[entry.date] = { date: entry.date, calories: 0, burned: 0 }
+        if (!dayMap[entry.date]) dayMap[entry.date] = { date: entry.date, calories: 0, burned: 0, water: 0 }
         dayMap[entry.date].calories += entry.calories
       }
       for (const entry of activityRes.data ?? []) {
-        if (!dayMap[entry.date]) dayMap[entry.date] = { date: entry.date, calories: 0, burned: 0 }
+        if (!dayMap[entry.date]) dayMap[entry.date] = { date: entry.date, calories: 0, burned: 0, water: 0 }
         dayMap[entry.date].burned += entry.calories_burned
+      }
+      for (const entry of waterRes.data ?? []) {
+        if (!dayMap[entry.date]) dayMap[entry.date] = { date: entry.date, calories: 0, burned: 0, water: 0 }
+        dayMap[entry.date].water += entry.amount_ml
       }
       return Object.values(dayMap).sort((a, b) => b.date.localeCompare(a.date))
     },
@@ -198,6 +205,13 @@ export default function HistoryPage() {
                   <p className="font-medium text-[#F8FAFC] text-sm">{formatDayLabel(day.date, t.dateLocale)}</p>
                   {day.burned > 0 && (
                     <p className="text-xs text-amber-400 mt-0.5">🔥 {day.burned} {t.burned}</p>
+                  )}
+                  {day.water > 0 && (
+                    <p className="text-xs text-cyan-400 mt-0.5">
+                      💧 {day.water >= 1000
+                        ? `${(day.water / 1000).toFixed(1).replace('.0', '')}${t.liters}`
+                        : `${day.water}${t.ml}`}
+                    </p>
                   )}
                 </div>
                 <div className="text-right">

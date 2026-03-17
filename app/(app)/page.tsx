@@ -13,6 +13,7 @@ import FoodCard from '@/components/FoodCard'
 import ActivityCard from '@/components/ActivityCard'
 import DateNav from '@/components/DateNav'
 import ProfileSheet from '@/components/ProfileSheet'
+import WaterSection from '@/components/WaterSection'
 import type { FoodEntry, ActivityEntry, UserProfile } from '@/lib/types'
 import { useLocale } from '@/lib/locale-context'
 
@@ -177,6 +178,15 @@ function Dashboard() {
         <MacroBar label={t.carbs} current={totalCarbs} target={carbsTarget} color="bg-emerald-500" />
         <MacroBar label={t.fat} current={totalFat} target={fatTarget} color="bg-amber-500" />
       </div>
+
+      {/* Water Section */}
+      {user && profile && (
+        <WaterSection
+          date={date}
+          userId={user.id}
+          dailyGoal={profile.daily_water_goal ?? 2000}
+        />
+      )}
 
       {/* Food Section */}
       <div className="mb-6">
