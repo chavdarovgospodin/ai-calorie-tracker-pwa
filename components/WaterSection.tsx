@@ -145,7 +145,7 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
             onClick={() => handleAdd(ml)}
             className="flex-1 py-2 rounded-xl text-xs font-semibold text-cyan-400 bg-cyan-600/10 hover:bg-cyan-600/20 border border-cyan-600/20 transition-colors"
           >
-            +{ml}
+            +{ml}{t.ml}
           </button>
         ))}
         {/* Custom ml input */}
