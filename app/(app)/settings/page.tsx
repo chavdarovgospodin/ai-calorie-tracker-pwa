@@ -123,6 +123,11 @@ export default function SettingsPage() {
       toast.error('Height must be between 100 and 250 cm');
       return;
     }
+    const waterGoalNum = parseInt(waterGoal, 10);
+    if (!waterGoal || isNaN(waterGoalNum) || waterGoalNum < 500 || waterGoalNum > 5000) {
+      toast.error('Water goal must be between 500 and 5000 ml');
+      return;
+    }
     setSaving(true);
 
     if (!user) return;
@@ -143,7 +148,7 @@ export default function SettingsPage() {
         user_id: user.id,
         ...profileFields,
         daily_calorie_target,
-        daily_water_goal: Number(waterGoal) || 2000,
+        daily_water_goal: waterGoalNum,
         onboarding_completed: true,
       },
       { onConflict: 'user_id' },
@@ -331,11 +336,16 @@ export default function SettingsPage() {
           <input
             type="number"
             value={waterGoal}
-            onChange={(e) => setWaterGoal(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value
+              if (val === '' || /^\d+$/.test(val)) {
+                setWaterGoal(val)
+              }
+            }}
             className={inputClass}
             placeholder="2000"
             min={500}
-            max={10000}
+            max={5000}
             step={100}
           />
         </div>
