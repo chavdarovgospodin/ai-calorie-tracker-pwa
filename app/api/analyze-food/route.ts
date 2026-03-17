@@ -128,29 +128,40 @@ Return ONLY valid JSON, no markdown:
     const descriptionStr =
       typeof description === 'string' ? description.slice(0, 200) : '';
 
-    const imagePrompt = `You are a food image analyzer for a calorie tracking app. Your job is to:
-1. Determine if the image shows food, a meal, a drink, ingredients, a food menu, or food packaging
-2. If valid food image: analyze the nutritional content
-3. If not valid: explain why
+    const imagePrompt = `You are an expert food image analyzer for a calorie tracking app.
 
 ${descriptionStr ? `User also provided this description: <description>${descriptionStr}</description>` : ''}
 
-Validation rules:
-- Valid: any food, meal, drink, ingredients, restaurant menus, food packaging/labels
-- Valid: partially eaten meals, messy plates
-- Invalid: non-food objects (cars, people, animals, landscapes, etc.)
-- Invalid: image too dark, blurry, or unclear to identify contents
-- Invalid: empty plates with no food
+STEP 1 — IDENTIFY what is in the image:
+- Is it a packaged/branded product with a visible label or recognizable branding? (e.g. tuna can, yogurt cup, protein bar, chips bag)
+- Is it a prepared meal or dish on a plate/bowl?
+- Is it raw ingredients?
+- Is it a nutrition facts label or menu?
+
+STEP 2 — DETERMINE THE QUANTITY:
+- PACKAGED PRODUCT with visible brand/label: use your knowledge of that specific product's FULL package size. For example:
+  * Rio Mare Insalatissime = 160g full can
+  * Activia yogurt standard = 125g
+  * Red Bull 250ml can
+  Never use per-100g values when the full package is visible or the brand is identifiable — always use the complete package
+- MEAL ON A PLATE: estimate total grams using plate size, portion depth, and visual context
+- RAW INGREDIENTS: estimate total visible quantity
+
+STEP 3 — CALCULATE nutrition for the EXACT quantity from Step 2.
+
+VALIDATION — be very lenient:
+- Mark as VALID if there is ANY food, drink, ingredient, packaging, or nutrition label visible
+- Only mark as INVALID if the image clearly contains absolutely no food whatsoever (e.g. a photo of a car, a landscape, a person with no food)
+- When in doubt → mark as valid and make your best estimate
 
 If VALID:
-- Describe what you see and estimate nutritional content
-- Use visual cues (plate size, context) to estimate portions
-- Set valid: true and populate result
+- Set valid: true
+- Populate result with nutrition for the FULL quantity identified in Step 2
+- Include brand name and size in the name field when identifiable
 
 If INVALID:
-- Set valid: false
-- Set result: null
-- Write a friendly reason in ${respondIn}.
+- Set valid: false, result: null
+- Write a short friendly reason in ${respondIn}
 
 Respond in ${respondIn}.
 
@@ -159,7 +170,7 @@ Return ONLY valid JSON, no markdown:
   "valid": boolean,
   "reason": string | null,
   "result": {
-    "name": "string",
+    "name": "string — include brand and full size when known, e.g. 'Rio Mare Insalatissime 160g' or 'Pasta Bolognese ~350g'",
     "calories": number,
     "protein": number,
     "carbs": number,
