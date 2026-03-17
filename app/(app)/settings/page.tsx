@@ -21,14 +21,22 @@ export default function SettingsPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
 
-  const [age, setAge] = useState('');
-  const [weight, setWeight] = useState('');
-  const [height, setHeight] = useState('');
+  const [ageStr, setAgeStr] = useState('');
+  const [age, setAge] = useState<number | undefined>(undefined);
+
+  const [weightStr, setWeightStr] = useState('');
+  const [weight, setWeight] = useState<number | undefined>(undefined);
+
+  const [heightStr, setHeightStr] = useState('');
+  const [height, setHeight] = useState<number | undefined>(undefined);
+
   const [gender, setGender] = useState<UserProfile['gender']>('male');
   const [goal, setGoal] = useState<UserProfile['goal']>('maintain');
   const [activityLevel, setActivityLevel] =
     useState<UserProfile['activity_level']>('moderately_active');
-  const [waterGoal, setWaterGoal] = useState('2000');
+
+  const [waterGoalStr, setWaterGoalStr] = useState('2000');
+  const [waterGoal, setWaterGoal] = useState<number | undefined>(2000);
 
   const supabase = useMemo(() => createClient(), []);
   const queryClient = useQueryClient();
@@ -58,45 +66,38 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (profileData) {
-      setAge(String(profileData.age));
-      setWeight(String(profileData.weight));
-      setHeight(String(profileData.height));
+      setAgeStr(String(profileData.age));
+      setAge(profileData.age);
+      setWeightStr(String(profileData.weight));
+      setWeight(profileData.weight);
+      setHeightStr(String(profileData.height));
+      setHeight(profileData.height);
       setGender(profileData.gender);
       setGoal(profileData.goal);
       setActivityLevel(profileData.activity_level);
-      setWaterGoal(String(profileData?.daily_water_goal ?? 2000));
+      setWaterGoalStr(String(profileData?.daily_water_goal ?? 2000));
+      setWaterGoal(profileData?.daily_water_goal ?? 2000);
     }
   }, [profileData]);
 
   const isLoading = !user || !profileData;
 
   const hasChanges = profileData
-    ? age !== String(profileData.age) ||
-      weight !== String(profileData.weight) ||
-      height !== String(profileData.height) ||
+    ? age !== profileData.age ||
+      weight !== profileData.weight ||
+      height !== profileData.height ||
       gender !== profileData.gender ||
       goal !== profileData.goal ||
       activityLevel !== profileData.activity_level ||
-      waterGoal !== String(profileData?.daily_water_goal ?? 2000)
+      waterGoal !== (profileData?.daily_water_goal ?? 2000)
     : false;
 
-  const ageNum = Number(age);
-  const weightNum = Number(weight);
-  const heightNum = Number(height);
   const caloriePreview =
-    age &&
-    weight &&
-    height &&
-    ageNum >= 10 &&
-    ageNum <= 120 &&
-    weightNum >= 20 &&
-    weightNum <= 300 &&
-    heightNum >= 100 &&
-    heightNum <= 250
+    age !== undefined && weight !== undefined && height !== undefined
       ? calculateFromProfile({
-          age: ageNum,
-          weight: weightNum,
-          height: heightNum,
+          age,
+          weight,
+          height,
           gender,
           goal,
           activity_level: activityLevel,
@@ -104,27 +105,11 @@ export default function SettingsPage() {
       : null;
 
   async function handleSave() {
-    if (!age || !weight || !height) {
+    if (age === undefined || weight === undefined || height === undefined) {
       toast.error(t.pleaseFillAllFields);
       return;
     }
-    const ageNum = Number(age);
-    const weightNum = Number(weight);
-    const heightNum = Number(height);
-    if (ageNum < 10 || ageNum > 120) {
-      toast.error('Age must be between 10 and 120');
-      return;
-    }
-    if (weightNum < 20 || weightNum > 300) {
-      toast.error('Weight must be between 20 and 300 kg');
-      return;
-    }
-    if (heightNum < 100 || heightNum > 250) {
-      toast.error('Height must be between 100 and 250 cm');
-      return;
-    }
-    const waterGoalNum = parseInt(waterGoal, 10);
-    if (!waterGoal || isNaN(waterGoalNum) || waterGoalNum < 500 || waterGoalNum > 5000) {
+    if (waterGoal === undefined) {
       toast.error('Water goal must be between 500 and 5000 ml');
       return;
     }
@@ -133,9 +118,9 @@ export default function SettingsPage() {
     if (!user) return;
 
     const profileFields: ProfileFields = {
-      age: ageNum,
-      weight: weightNum,
-      height: heightNum,
+      age,
+      weight,
+      height,
       gender,
       goal,
       activity_level: activityLevel,
@@ -148,7 +133,7 @@ export default function SettingsPage() {
         user_id: user.id,
         ...profileFields,
         daily_calorie_target,
-        daily_water_goal: waterGoalNum,
+        daily_water_goal: waterGoal,
         onboarding_completed: true,
       },
       { onConflict: 'user_id' },
@@ -243,13 +228,26 @@ export default function SettingsPage() {
             </label>
             <input
               type="number"
-              value={age}
-              onChange={(e) => setAge(e.target.value)}
+              inputMode="numeric"
+              value={ageStr}
+              onChange={(e) => {
+                const val = e.target.value;
+                setAgeStr(val);
+                const n = parseInt(val, 10);
+                if (!isNaN(n) && n >= 10 && n <= 120) {
+                  setAge(n);
+                } else {
+                  setAge(undefined);
+                }
+              }}
               className={inputClass}
               placeholder="25"
               min={10}
-              max={100}
+              max={120}
             />
+            {ageStr && age === undefined && (
+              <p className="text-xs text-red-400 mt-1">Age must be between 10 and 120</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">
@@ -257,13 +255,27 @@ export default function SettingsPage() {
             </label>
             <input
               type="number"
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
+              inputMode="decimal"
+              value={weightStr}
+              onChange={(e) => {
+                const val = e.target.value;
+                setWeightStr(val);
+                const n = parseFloat(val);
+                if (!isNaN(n) && n >= 20 && n <= 300) {
+                  setWeight(n);
+                } else {
+                  setWeight(undefined);
+                }
+              }}
               className={inputClass}
               placeholder="70"
-              min={30}
+              min={20}
+              max={300}
               step={0.1}
             />
+            {weightStr && weight === undefined && (
+              <p className="text-xs text-red-400 mt-1">Weight must be between 20 and 300 kg</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">
@@ -271,13 +283,27 @@ export default function SettingsPage() {
             </label>
             <input
               type="number"
-              value={height}
-              onChange={(e) => setHeight(e.target.value)}
+              inputMode="decimal"
+              value={heightStr}
+              onChange={(e) => {
+                const val = e.target.value;
+                setHeightStr(val);
+                const n = parseFloat(val);
+                if (!isNaN(n) && n >= 100 && n <= 250) {
+                  setHeight(n);
+                } else {
+                  setHeight(undefined);
+                }
+              }}
               className={inputClass}
               placeholder="175"
               min={100}
+              max={250}
               step={0.1}
             />
+            {heightStr && height === undefined && (
+              <p className="text-xs text-red-400 mt-1">Height must be between 100 and 250 cm</p>
+            )}
           </div>
         </div>
 
@@ -335,11 +361,16 @@ export default function SettingsPage() {
           </label>
           <input
             type="number"
-            value={waterGoal}
+            inputMode="numeric"
+            value={waterGoalStr}
             onChange={(e) => {
-              const val = e.target.value
-              if (val === '' || /^\d+$/.test(val)) {
-                setWaterGoal(val)
+              const val = e.target.value;
+              setWaterGoalStr(val);
+              const n = parseInt(val, 10);
+              if (!isNaN(n) && n >= 500 && n <= 5000) {
+                setWaterGoal(n);
+              } else {
+                setWaterGoal(undefined);
               }
             }}
             className={inputClass}
@@ -348,6 +379,9 @@ export default function SettingsPage() {
             max={5000}
             step={100}
           />
+          {waterGoalStr && waterGoal === undefined && (
+            <p className="text-xs text-red-400 mt-1">Water goal must be between 500 and 5000 ml</p>
+          )}
         </div>
 
         {caloriePreview && (
@@ -361,7 +395,7 @@ export default function SettingsPage() {
 
         <button
           onClick={handleSave}
-          disabled={saving || !hasChanges}
+          disabled={saving || !hasChanges || age === undefined || weight === undefined || height === undefined || waterGoal === undefined}
           className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? (
