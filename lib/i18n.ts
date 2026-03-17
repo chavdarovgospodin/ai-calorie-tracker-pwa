@@ -170,6 +170,8 @@ export const translations = {
     invalidHeight: 'Height must be between 100 and 250 cm',
 
     // Water
+    invalidWaterAmount: 'Please enter a valid amount (1–5000ml)',
+    noWaterLogged: 'No water logged yet',
     invalidAmount: 'Enter a value between 1 and 5000 ml',
     water: 'Water',
     waterGoal: 'Daily goal',
@@ -356,6 +358,8 @@ export const translations = {
     invalidHeight: 'Въведи височина между 100 и 250 см',
 
     // Water
+    invalidWaterAmount: 'Въведи валидно количество (1–5000мл)',
+    noWaterLogged: 'Няма добавена вода',
     invalidAmount: 'Въведи стойност между 1 и 5000 мл',
     water: 'Вода',
     waterGoal: 'Дневна цел',

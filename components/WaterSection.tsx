@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Droplets, Trash2 } from 'lucide-react'
+import { Droplets, ChevronDown, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
@@ -20,8 +20,9 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
   const { t } = useLocale()
   const supabase = createClient()
   const queryClient = useQueryClient()
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState(false)
   const [customMl, setCustomMl] = useState('')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const confirmRef = useRef<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -43,10 +44,20 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
   const pct = Math.min((totalMl / dailyGoal) * 100, 100)
   const isGoalMet = totalMl >= dailyGoal
 
-  async function handleAdd(ml: number): Promise<boolean> {
-    if (!Number.isInteger(ml) || ml <= 0 || ml > 5000) {
-      toast.error(t.invalidAmount)
-      return false
+  function formatAmount(ml: number) {
+    if (ml >= 1000) return `${(ml / 1000).toFixed(1).replace('.0', '')}${t.liters}`
+    return `${ml}${t.ml}`
+  }
+
+  function formatTime(isoString: string) {
+    const d = new Date(isoString)
+    return d.toLocaleTimeString(t.dateLocale, { hour: '2-digit', minute: '2-digit' })
+  }
+
+  async function handleAdd(ml: number) {
+    if (ml <= 0 || ml > 5000) {
+      toast.error(t.invalidWaterAmount)
+      return
     }
     const { error } = await supabase.from('water_entries').insert({
       user_id: userId,
@@ -55,21 +66,20 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
     })
     if (error) {
       toast.error(t.failedToLogWater)
-      return false
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['water_entries', date] })
+      toast.success(t.waterLogged)
     }
-    queryClient.invalidateQueries({ queryKey: ['water_entries', date] })
-    toast.success(t.waterLogged)
-    return true
   }
 
   async function handleCustomAdd() {
-    const ml = parseInt(customMl, 10)
-    if (!Number.isInteger(ml) || ml <= 0 || ml > 5000) {
-      toast.error(t.invalidAmount)
+    const ml = parseInt(customMl)
+    if (!ml || ml <= 0 || ml > 5000) {
+      toast.error(t.invalidWaterAmount)
       return
     }
-    const ok = await handleAdd(ml)
-    if (ok) setCustomMl('')
+    await handleAdd(ml)
+    setCustomMl('')
   }
 
   async function handleDelete(id: string) {
@@ -94,11 +104,6 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
     }
   }
 
-  function formatAmount(ml: number) {
-    if (ml >= 1000) return `${(ml / 1000).toFixed(1).replace('.0', '')}${t.liters}`
-    return `${ml}${t.ml}`
-  }
-
   return (
     <div className="mb-6">
       {/* Header */}
@@ -107,11 +112,21 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
           <Droplets size={18} className={isGoalMet ? 'text-cyan-400' : 'text-cyan-500'} />
           <h2 className="text-base font-semibold text-[#F8FAFC]">{t.water}</h2>
         </div>
-        <span className="text-sm text-[#64748B]">
-          {formatAmount(totalMl)}
-          <span className="text-[#3A3A4E]"> / </span>
-          {formatAmount(dailyGoal)}
-        </span>
+        {/* Amount + expand toggle */}
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="flex items-center gap-1.5 text-sm"
+        >
+          <span className="text-cyan-400 font-medium">
+            {formatAmount(totalMl)}
+            <span className="text-[#64748B] font-normal"> / {formatAmount(dailyGoal)}</span>
+          </span>
+          <ChevronDown
+            size={14}
+            className="text-[#64748B] transition-transform duration-200"
+            style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          />
+        </button>
       </div>
 
       {/* Progress bar */}
@@ -122,52 +137,48 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
         />
       </div>
 
-      {/* Quick add buttons */}
-      <div className="flex gap-2 mb-3">
+      {/* Quick add + custom input */}
+      <div className="flex gap-1.5 items-center">
         {QUICK_ADD.map((ml) => (
           <button
             key={ml}
             onClick={() => handleAdd(ml)}
             className="flex-1 py-2 rounded-xl text-xs font-semibold text-cyan-400 bg-cyan-600/10 hover:bg-cyan-600/20 border border-cyan-600/20 transition-colors"
           >
-            +{ml}{t.ml}
+            +{ml}
           </button>
         ))}
+        {/* Custom ml input */}
+        <div className="flex flex-[1.4] items-center bg-[#0A0A0F] border border-[#1E1E2E] rounded-xl overflow-hidden">
+          <input
+            type="number"
+            min={1}
+            max={5000}
+            value={customMl}
+            onChange={(e) => setCustomMl(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleCustomAdd()}
+            placeholder={t.ml}
+            className="w-full bg-transparent outline-none text-[#F8FAFC] text-xs text-center px-2 py-2 placeholder-[#64748B]"
+          />
+          <button
+            onClick={handleCustomAdd}
+            className="px-2.5 py-2 text-cyan-400 bg-cyan-600/10 hover:bg-cyan-600/20 border-l border-[#1E1E2E] text-sm font-bold transition-colors"
+          >
+            +
+          </button>
+        </div>
       </div>
 
-      {/* Custom amount input */}
-      <div className="flex gap-2 mb-3">
-        <input
-          type="number"
-          min={1}
-          max={5000}
-          step={10}
-          value={customMl}
-          onChange={(e) => setCustomMl(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleCustomAdd()}
-          placeholder={`Custom ${t.ml}`}
-          className="flex-1 bg-[#0A0A0F] border border-cyan-600/20 focus:border-cyan-500 rounded-xl px-3 py-2 text-sm text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
-        />
-        <button
-          onClick={handleCustomAdd}
-          className="px-4 py-2 rounded-xl text-sm font-semibold text-cyan-400 bg-cyan-600/10 hover:bg-cyan-600/20 border border-cyan-600/20 transition-colors"
-        >
-          +
-        </button>
-      </div>
-
-      {/* Entry list — only if there are entries */}
-      {entries.length > 0 && (
-        <div className="space-y-1.5">
+      {/* Collapsible entries */}
+      {expanded && entries.length > 0 && (
+        <div className="mt-3 border-t border-[#1E1E2E] pt-3 space-y-1.5">
           {entries.map((entry) => (
             <div
               key={entry.id}
               className="flex items-center justify-between bg-[#111118] border border-[#1E1E2E] rounded-xl px-3 py-2"
             >
-              <div className="flex items-center gap-2">
-                <Droplets size={13} className="text-cyan-500" />
-                <span className="text-sm text-[#F8FAFC]">{formatAmount(entry.amount_ml)}</span>
-              </div>
+              <span className="text-xs text-[#64748B]">{formatTime(entry.created_at)}</span>
+              <span className="text-sm font-medium text-[#F8FAFC]">{formatAmount(entry.amount_ml)}</span>
               <button
                 onClick={() => handleDelete(entry.id)}
                 className={`text-xs font-semibold rounded-lg px-2 py-1 transition-colors ${
@@ -180,6 +191,13 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Empty state when expanded */}
+      {expanded && entries.length === 0 && (
+        <div className="mt-3 border-t border-[#1E1E2E] pt-3">
+          <p className="text-xs text-[#64748B] text-center">{t.noWaterLogged}</p>
         </div>
       )}
     </div>
