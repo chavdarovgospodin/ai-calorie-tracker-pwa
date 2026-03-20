@@ -45,7 +45,7 @@ export default function ProfileSheet({ open, onClose, email, avatarLetter }: Pro
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40"
+        className="fixed inset-0 z-40 bg-black/50"
         onClick={onClose}
       />
 
