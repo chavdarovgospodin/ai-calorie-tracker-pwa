@@ -138,7 +138,7 @@ export const translations = {
     // History
     history: 'History',
     avgCalories: 'Avg. Calories',
-    avgDiff: 'Avg +/–',
+    avgDiff: 'Total +/–',
     day: 'day',
     target: 'target',
     daysTracked: 'Days Tracked',
@@ -334,7 +334,7 @@ export const translations = {
     // History
     history: 'История',
     avgCalories: 'Средно калории',
-    avgDiff: 'Средно +/–',
+    avgDiff: 'Общо +/–',
     day: 'ден',
     target: 'цел',
     daysTracked: 'Проследени дни',

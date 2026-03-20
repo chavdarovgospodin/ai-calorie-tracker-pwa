@@ -127,7 +127,9 @@ export default function HistoryPage() {
   const target = profile?.daily_calorie_target ?? 2000
   const trackedDays = days.length
   const avgCalories = trackedDays > 0 ? Math.round(days.reduce((s, d) => s + d.calories, 0) / trackedDays) : 0
-  const avgDiff = avgCalories - target
+  const totalCaloriesMonth = days.reduce((s, d) => s + d.calories, 0)
+  const totalTargetMonth = days.reduce((s, d) => s + (target + d.burned), 0)
+  const totalDiff = totalCaloriesMonth - totalTargetMonth
 
   return (
     <div className="p-4">
@@ -168,13 +170,13 @@ export default function HistoryPage() {
           </div>
           <div>
             <div className="flex items-center gap-1.5 mb-1">
-              <TrendingUp size={13} className={!isLoading && avgDiff > 0 ? 'text-red-400' : 'text-emerald-400'} />
+              <TrendingUp size={13} className={!isLoading && totalDiff > 0 ? 'text-red-400' : 'text-emerald-400'} />
               <span className="text-xs text-[#64748B]">{t.avgDiff}</span>
             </div>
-            <p className={`text-xl font-bold ${isLoading ? 'text-[#F8FAFC]' : avgDiff > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-              {isLoading ? '–' : `${avgDiff > 0 ? '+' : ''}${avgDiff.toLocaleString()}`}
+            <p className={`text-xl font-bold ${isLoading ? 'text-[#F8FAFC]' : totalDiff > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+              {isLoading ? '–' : `${totalDiff > 0 ? '+' : ''}${totalDiff.toLocaleString()}`}
             </p>
-            <p className="text-[10px] text-[#64748B]">{t.kcal} / {t.day}</p>
+            <p className="text-[10px] text-[#64748B]">{t.kcal} {t.thisMonth}</p>
           </div>
           <div>
             <div className="flex items-center gap-1.5 mb-1">
