@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Star, CheckCircle, AlertCircle, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
@@ -41,6 +41,18 @@ export default function FoodDetailSheet({ entry, date, userId, onClose }: FoodDe
   const supabase = createClient()
   const queryClient = useQueryClient()
   const [saving, setSaving] = useState(false)
+  const [isFavorite, setIsFavorite] = useState(false)
+
+  useEffect(() => {
+    if (!entry) return
+    supabase
+      .from('favorite_foods')
+      .select('id')
+      .eq('user_id', userId)
+      .ilike('name', entry.name)
+      .maybeSingle()
+      .then(({ data }) => setIsFavorite(!!data))
+  }, [entry?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!entry) return null
 
@@ -48,36 +60,53 @@ export default function FoodDetailSheet({ entry, date, userId, onClose }: FoodDe
     return new Date(iso).toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' })
   }
 
-  async function handleAddToFavorites() {
+  async function handleToggleFavorite() {
     if (saving) return
     setSaving(true)
-    const { data: existing } = await supabase
-      .from('favorite_foods')
-      .select('id, use_count')
-      .eq('user_id', userId)
-      .ilike('name', entry!.name)
-      .maybeSingle()
 
-    if (existing) {
-      await supabase
+    if (isFavorite) {
+      const { error } = await supabase
         .from('favorite_foods')
-        .update({ calories: entry!.calories, protein: entry!.protein, carbs: entry!.carbs, fat: entry!.fat, fiber: entry!.fiber, use_count: existing.use_count + 1 })
-        .eq('id', existing.id)
-      toast.success(t.favoriteUpdated)
+        .delete()
+        .eq('user_id', userId)
+        .ilike('name', entry!.name)
+      if (error) {
+        toast.error(t.failedToRemoveFavorite)
+      } else {
+        setIsFavorite(false)
+        queryClient.invalidateQueries({ queryKey: ['favorite_foods', userId] })
+        toast.success(t.removedFromFavorites)
+      }
     } else {
-      await supabase.from('favorite_foods').insert({
-        user_id: userId,
-        name: entry!.name,
-        calories: entry!.calories,
-        protein: entry!.protein,
-        carbs: entry!.carbs,
-        fat: entry!.fat,
-        fiber: entry!.fiber,
-        use_count: 1,
-      })
-      toast.success(t.addedToFavorites)
+      const { data: existing } = await supabase
+        .from('favorite_foods')
+        .select('id, use_count')
+        .eq('user_id', userId)
+        .ilike('name', entry!.name)
+        .maybeSingle()
+
+      if (existing) {
+        await supabase
+          .from('favorite_foods')
+          .update({ calories: entry!.calories, protein: entry!.protein, carbs: entry!.carbs, fat: entry!.fat, fiber: entry!.fiber, use_count: existing.use_count + 1 })
+          .eq('id', existing.id)
+        toast.success(t.favoriteUpdated)
+      } else {
+        await supabase.from('favorite_foods').insert({
+          user_id: userId,
+          name: entry!.name,
+          calories: entry!.calories,
+          protein: entry!.protein,
+          carbs: entry!.carbs,
+          fat: entry!.fat,
+          fiber: entry!.fiber,
+          use_count: 1,
+        })
+        toast.success(t.addedToFavorites)
+      }
+      setIsFavorite(true)
+      queryClient.invalidateQueries({ queryKey: ['favorite_foods', userId] })
     }
-    queryClient.invalidateQueries({ queryKey: ['favorite_foods', userId] })
     setSaving(false)
   }
 
@@ -179,12 +208,19 @@ export default function FoodDetailSheet({ entry, date, userId, onClose }: FoodDe
         {/* Actions */}
         <div className="flex gap-3">
           <button
-            onClick={handleAddToFavorites}
+            onClick={handleToggleFavorite}
             disabled={saving}
-            className="flex-1 flex items-center justify-center gap-2 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl py-3 font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`flex-1 flex items-center justify-center gap-2 border rounded-xl py-3 font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              isFavorite
+                ? 'bg-amber-500/20 border-amber-500/40 text-amber-400 hover:bg-amber-500/30'
+                : 'bg-[#1A1A24] hover:bg-[#2A2A3E] border-[#1E1E2E] text-amber-400'
+            }`}
           >
-            {saving ? <span className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" /> : <Star size={15} />}
-            {t.saveToFavorites}
+            {saving
+              ? <span className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+              : <Star size={15} fill={isFavorite ? 'currentColor' : 'none'} />
+            }
+            {isFavorite ? t.removeFromFavorites : t.saveToFavorites}
           </button>
           <button
             onClick={handleLogAgain}

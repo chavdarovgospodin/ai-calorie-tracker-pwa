@@ -113,6 +113,8 @@ export const translations = {
     failedToSaveFavorite: 'Failed to save favorite',
     failedToLogFood: 'Failed to log food',
     failedToRemoveFavorite: 'Failed to remove favorite',
+    removeFromFavorites: 'Remove from favorites',
+    removedFromFavorites: 'Removed from favorites',
 
     // Activity
     logActivity: 'Log Activity',
@@ -136,6 +138,8 @@ export const translations = {
     // History
     history: 'History',
     avgCalories: 'Avg. Calories',
+    avgDiff: 'Avg +/–',
+    day: 'day',
     target: 'target',
     daysTracked: 'Days Tracked',
     thisMonth: 'this month',
@@ -305,6 +309,8 @@ export const translations = {
     failedToSaveFavorite: 'Грешка при запазване в любими',
     failedToLogFood: 'Грешка при добавяне',
     failedToRemoveFavorite: 'Грешка при премахване от любими',
+    removeFromFavorites: 'Премахни от любими',
+    removedFromFavorites: 'Премахнато от любими',
 
     // Activity
     logActivity: 'Добави активност',
@@ -328,6 +334,8 @@ export const translations = {
     // History
     history: 'История',
     avgCalories: 'Средно калории',
+    avgDiff: 'Средно +/–',
+    day: 'ден',
     target: 'цел',
     daysTracked: 'Проследени дни',
     thisMonth: 'този месец',

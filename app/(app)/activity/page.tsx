@@ -342,7 +342,7 @@ function AddActivity() {
       {/* Analyze Button */}
       <button
         onClick={handleAnalyze}
-        disabled={phase === 'analyzing' || description.length > 500}
+        disabled={phase === 'analyzing' || !description.trim() || description.length > 500}
         className="w-full mt-5 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {phase === 'idle' && <><Sparkles size={16} /> {t.analyzeWithAI}</>}

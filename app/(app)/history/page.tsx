@@ -127,6 +127,7 @@ export default function HistoryPage() {
   const target = profile?.daily_calorie_target ?? 2000
   const trackedDays = days.length
   const avgCalories = trackedDays > 0 ? Math.round(days.reduce((s, d) => s + d.calories, 0) / trackedDays) : 0
+  const avgDiff = avgCalories - target
 
   return (
     <div className="p-4">
@@ -156,22 +157,32 @@ export default function HistoryPage() {
 
       {/* Summary card */}
       <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-4 mb-5">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-3">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp size={14} className="text-indigo-400" />
+            <div className="flex items-center gap-1.5 mb-1">
+              <TrendingUp size={13} className="text-indigo-400" />
               <span className="text-xs text-[#64748B]">{t.avgCalories}</span>
             </div>
-            <p className="text-2xl font-bold text-[#F8FAFC]">{isLoading ? '–' : avgCalories.toLocaleString()}</p>
-            <p className="text-xs text-[#64748B]">{t.target} {target.toLocaleString()} {t.kcal}</p>
+            <p className="text-xl font-bold text-[#F8FAFC]">{isLoading ? '–' : avgCalories.toLocaleString()}</p>
+            <p className="text-[10px] text-[#64748B]">{t.target} {target.toLocaleString()}</p>
           </div>
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Calendar size={14} className="text-indigo-400" />
+            <div className="flex items-center gap-1.5 mb-1">
+              <TrendingUp size={13} className={!isLoading && avgDiff > 0 ? 'text-red-400' : 'text-emerald-400'} />
+              <span className="text-xs text-[#64748B]">{t.avgDiff}</span>
+            </div>
+            <p className={`text-xl font-bold ${isLoading ? 'text-[#F8FAFC]' : avgDiff > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+              {isLoading ? '–' : `${avgDiff > 0 ? '+' : ''}${avgDiff.toLocaleString()}`}
+            </p>
+            <p className="text-[10px] text-[#64748B]">{t.kcal} / {t.day}</p>
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Calendar size={13} className="text-indigo-400" />
               <span className="text-xs text-[#64748B]">{t.daysTracked}</span>
             </div>
-            <p className="text-2xl font-bold text-[#F8FAFC]">{isLoading ? '–' : trackedDays}</p>
-            <p className="text-xs text-[#64748B]">{t.thisMonth}</p>
+            <p className="text-xl font-bold text-[#F8FAFC]">{isLoading ? '–' : trackedDays}</p>
+            <p className="text-[10px] text-[#64748B]">{t.thisMonth}</p>
           </div>
         </div>
       </div>
