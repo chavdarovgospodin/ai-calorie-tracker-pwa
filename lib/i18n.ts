@@ -164,6 +164,10 @@ export const translations = {
     today: 'Today',
     yesterday: 'Yesterday',
 
+    // Detail sheet
+    addedAt: 'Added at',
+    logAgain: 'Log again',
+
     // Validation
     invalidAge: 'Age must be between 10 and 120',
     invalidWeight: 'Weight must be between 20 and 300 kg',
@@ -351,6 +355,10 @@ export const translations = {
     // DateNav
     today: 'Днес',
     yesterday: 'Вчера',
+
+    // Detail sheet
+    addedAt: 'Добавено в',
+    logAgain: 'Добави отново',
 
     // Validation
     invalidAge: 'Въведи възраст между 10 и 120',

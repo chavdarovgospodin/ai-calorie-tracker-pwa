@@ -14,6 +14,8 @@ import ActivityCard from '@/components/ActivityCard'
 import DateNav from '@/components/DateNav'
 import ProfileSheet from '@/components/ProfileSheet'
 import WaterSection from '@/components/WaterSection'
+import FoodDetailSheet from '@/components/FoodDetailSheet'
+import ActivityDetailSheet from '@/components/ActivityDetailSheet'
 import type { FoodEntry, ActivityEntry, UserProfile } from '@/lib/types'
 import { useLocale } from '@/lib/locale-context'
 
@@ -32,6 +34,8 @@ function Dashboard() {
   const today = new Date().toLocaleDateString('en-CA')
   const [date, setDate] = useState(searchParams.get('date') ?? today)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [selectedFood, setSelectedFood] = useState<FoodEntry | null>(null)
+  const [selectedActivity, setSelectedActivity] = useState<ActivityEntry | null>(null)
 
   useEffect(() => {
     const param = searchParams.get('date')
@@ -224,6 +228,7 @@ function Dashboard() {
                 key={entry.id}
                 entry={entry}
                 onDelete={handleDeleteFood}
+                onPress={setSelectedFood}
               />
             ))}
           </div>
@@ -261,6 +266,7 @@ function Dashboard() {
                 key={entry.id}
                 entry={entry}
                 onDelete={handleDeleteActivity}
+                onPress={setSelectedActivity}
               />
             ))}
           </div>
@@ -274,6 +280,8 @@ function Dashboard() {
       email={userEmail}
       avatarLetter={avatarLetter}
     />
+    {user && <FoodDetailSheet entry={selectedFood} date={date} userId={user.id} onClose={() => setSelectedFood(null)} />}
+    {user && <ActivityDetailSheet entry={selectedActivity} date={date} userId={user.id} onClose={() => setSelectedActivity(null)} />}
     </>
   )
 }

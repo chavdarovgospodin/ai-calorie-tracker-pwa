@@ -8,9 +8,10 @@ import { useLocale } from '@/lib/locale-context'
 interface FoodCardProps {
   entry: FoodEntry
   onDelete: (id: string) => void
+  onPress: (entry: FoodEntry) => void
 }
 
-export default function FoodCard({ entry, onDelete }: FoodCardProps) {
+export default function FoodCard({ entry, onDelete, onPress }: FoodCardProps) {
   const { t } = useLocale()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const confirmRef = useRef(false)

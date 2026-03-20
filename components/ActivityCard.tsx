@@ -8,9 +8,10 @@ import { useLocale } from '@/lib/locale-context'
 interface ActivityCardProps {
   entry: ActivityEntry
   onDelete: (id: string) => void
+  onPress: (entry: ActivityEntry) => void
 }
 
-export default function ActivityCard({ entry, onDelete }: ActivityCardProps) {
+export default function ActivityCard({ entry, onDelete, onPress }: ActivityCardProps) {
   const { t } = useLocale()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const confirmRef = useRef(false)
@@ -34,7 +35,7 @@ export default function ActivityCard({ entry, onDelete }: ActivityCardProps) {
   }
 
   return (
-    <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-4 flex items-center justify-between gap-3">
+    <div onClick={() => onPress(entry)} className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-4 flex items-center justify-between gap-3 cursor-pointer active:opacity-80 transition-opacity">
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-[#F8FAFC] truncate">{entry.description}</p>
         {entry.notes && (
