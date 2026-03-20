@@ -118,6 +118,7 @@ function AddActivity() {
 
   const { data: user } = useQuery({
     queryKey: ['user'],
+    staleTime: Infinity,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
       return user
@@ -126,6 +127,7 @@ function AddActivity() {
 
   const { data: profileData } = useQuery({
     queryKey: ['profile', user?.id],
+    staleTime: Infinity,
     queryFn: async () => {
       const { data } = await supabase
         .from('user_profiles')

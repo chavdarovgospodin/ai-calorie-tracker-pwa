@@ -43,6 +43,7 @@ export default function SettingsPage() {
 
   const { data: user } = useQuery({
     queryKey: ['user'],
+    staleTime: Infinity,
     queryFn: async () => {
       const {
         data: { user },
@@ -53,6 +54,7 @@ export default function SettingsPage() {
 
   const { data: profileData } = useQuery<UserProfile | null>({
     queryKey: ['profile', user?.id],
+    staleTime: Infinity,
     queryFn: async () => {
       const { data } = await supabase
         .from('user_profiles')

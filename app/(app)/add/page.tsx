@@ -140,6 +140,7 @@ function AddFood() {
 
   const { data: user } = useQuery({
     queryKey: ['user'],
+    staleTime: Infinity,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
       return user
