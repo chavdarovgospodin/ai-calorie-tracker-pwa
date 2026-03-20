@@ -125,7 +125,7 @@ export default function FoodDetailSheet({ entry, date, userId, onClose }: FoodDe
         {/* Header */}
         <div className="flex items-start justify-between mb-4 pr-7 pt-1">
           <div className="flex-1 min-w-0 mr-3">
-            <h3 className="font-bold text-[#F8FAFC] text-lg leading-tight mb-1.5 truncate">{entry.name}</h3>
+            <h3 className="font-bold text-[#F8FAFC] text-lg leading-tight mb-1.5">{entry.name}</h3>
             {entry.ai_confidence !== null && (
               <ConfidenceBadge confidence={entry.ai_confidence} />
             )}
