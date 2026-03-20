@@ -35,7 +35,7 @@ export default function FoodCard({ entry, onDelete, onPress }: FoodCardProps) {
   }
 
   return (
-    <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-4 flex items-center justify-between gap-3">
+    <div onClick={() => onPress(entry)} className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-4 flex items-center justify-between gap-3 cursor-pointer active:opacity-80 transition-opacity">
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-[#F8FAFC] truncate">{entry.name}</p>
         {entry.quantity && (

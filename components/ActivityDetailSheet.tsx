@@ -79,19 +79,15 @@ export default function ActivityDetailSheet({ entry, date, userId, onClose }: Ac
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
+      <div className="fixed inset-0 z-40 bg-black/60" onClick={onClose} />
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 max-w-[430px] mx-auto bg-[#111118] border-t border-[#1E1E2E] rounded-t-2xl px-4 pb-8">
-        <div className="flex justify-center pt-3 pb-2">
-          <div className="w-9 h-1 bg-[#2A2A3E] rounded-full" />
-        </div>
-
-        <button onClick={onClose} className="absolute top-4 right-4 text-[#64748B] hover:text-[#F8FAFC] transition-colors">
+      <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 max-w-[400px] mx-auto bg-[#111118] border border-[#1E1E2E] rounded-2xl px-4 pb-5 pt-4">
+        <button onClick={onClose} className="absolute top-3 right-3 text-[#64748B] hover:text-[#F8FAFC] transition-colors">
           <X size={18} />
         </button>
 
         {/* Header */}
-        <div className="flex items-start justify-between mb-4 pr-6">
+        <div className="flex items-start justify-between mb-4 pr-7 pt-1">
           <div className="flex-1 min-w-0 mr-3">
             <h3 className="font-bold text-[#F8FAFC] text-lg leading-tight mb-1.5">{entry.description}</h3>
           </div>
