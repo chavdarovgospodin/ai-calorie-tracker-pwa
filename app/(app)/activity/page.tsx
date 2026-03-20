@@ -424,7 +424,8 @@ function AddActivity() {
             </button>
             <button
               onClick={handleSaveFavorite}
-              className="flex items-center justify-center gap-1.5 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl px-3 py-2.5 font-semibold transition-colors"
+              disabled={saving}
+              className="flex items-center justify-center gap-1.5 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl px-3 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title={t.saveToFavorites}
             >
               <Star size={16} />

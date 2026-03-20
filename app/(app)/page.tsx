@@ -77,7 +77,7 @@ function Dashboard() {
     enabled: !!user,
   })
 
-  const { data: foodEntries = [], isLoading } = useQuery<FoodEntry[]>({
+  const { data: foodEntries = [], isLoading: foodLoading } = useQuery<FoodEntry[]>({
     queryKey: ['food_entries', date, user?.id],
     queryFn: async () => {
       const { data } = await supabase
@@ -91,7 +91,7 @@ function Dashboard() {
     enabled: !!user,
   })
 
-  const { data: activityEntries = [] } = useQuery<ActivityEntry[]>({
+  const { data: activityEntries = [], isLoading: activityLoading } = useQuery<ActivityEntry[]>({
     queryKey: ['activity_entries', date, user?.id],
     queryFn: async () => {
       const { data } = await supabase
@@ -139,6 +139,8 @@ function Dashboard() {
     }
   }
 
+  const isLoading = foodLoading || activityLoading || profile === undefined
+
   const totalCalories = foodEntries.reduce((sum, e) => sum + e.calories, 0)
   const totalProtein = foodEntries.reduce((sum, e) => sum + (e.protein ?? 0), 0)
   const totalCarbs = foodEntries.reduce((sum, e) => sum + (e.carbs ?? 0), 0)
@@ -179,19 +181,40 @@ function Dashboard() {
 
       {/* Macro Bars */}
       <div className="grid grid-cols-3 gap-3 mb-6">
-        <MacroBar label={t.protein} current={totalProtein} target={proteinTarget} color="bg-indigo-500" />
-        <MacroBar label={t.carbs} current={totalCarbs} target={carbsTarget} color="bg-emerald-500" />
-        <MacroBar label={t.fat} current={totalFat} target={fatTarget} color="bg-amber-500" />
+        {isLoading ? (
+          <>
+            <div className="h-20 rounded-2xl bg-[#111118] animate-pulse" />
+            <div className="h-20 rounded-2xl bg-[#111118] animate-pulse" />
+            <div className="h-20 rounded-2xl bg-[#111118] animate-pulse" />
+          </>
+        ) : (
+          <>
+            <MacroBar label={t.protein} current={totalProtein} target={proteinTarget} color="bg-indigo-500" />
+            <MacroBar label={t.carbs} current={totalCarbs} target={carbsTarget} color="bg-emerald-500" />
+            <MacroBar label={t.fat} current={totalFat} target={fatTarget} color="bg-amber-500" />
+          </>
+        )}
       </div>
 
       {/* Water Section */}
-      {user && profile && (
+      {isLoading ? (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="h-5 w-16 bg-[#111118] rounded-lg animate-pulse" />
+            <div className="h-4 w-24 bg-[#111118] rounded-lg animate-pulse" />
+          </div>
+          <div className="h-1.5 rounded-full bg-[#111118] animate-pulse mb-3" />
+          <div className="flex gap-2">
+            {[1,2,3,4].map(i => <div key={i} className="flex-1 h-9 rounded-xl bg-[#111118] animate-pulse" />)}
+          </div>
+        </div>
+      ) : user && profile ? (
         <WaterSection
           date={date}
           userId={user.id}
           dailyGoal={profile.daily_water_goal ?? 2000}
         />
-      )}
+      ) : null}
 
       {/* Food Section */}
       <div className="mb-6">
@@ -199,7 +222,8 @@ function Dashboard() {
           <h2 className="text-base font-semibold text-[#F8FAFC]">{t.todaysFood}</h2>
           <button
             onClick={() => router.push(`/add?date=${date}`)}
-            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors"
+            disabled={isLoading}
+            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus size={14} />
             {t.add}
@@ -241,7 +265,8 @@ function Dashboard() {
           <h2 className="text-base font-semibold text-[#F8FAFC]">{t.activity}</h2>
           <button
             onClick={() => router.push(`/activity?date=${date}`)}
-            className="flex items-center gap-1.5 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-[#F8FAFC] rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors"
+            disabled={isLoading}
+            className="flex items-center gap-1.5 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-[#F8FAFC] rounded-xl px-3 py-1.5 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Zap size={14} />
             {t.log}

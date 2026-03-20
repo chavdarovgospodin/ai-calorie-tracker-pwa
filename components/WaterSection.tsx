@@ -21,6 +21,7 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
   const supabase = createClient()
   const queryClient = useQueryClient()
   const [expanded, setExpanded] = useState(false)
+  const [adding, setAdding] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const confirmRef = useRef<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -54,15 +55,18 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
   }
 
   async function handleAdd(ml: number) {
+    if (adding) return
     if (ml <= 0 || ml > 5000) {
       toast.error(t.invalidWaterAmount)
       return
     }
+    setAdding(true)
     const { error } = await supabase.from('water_entries').insert({
       user_id: userId,
       date,
       amount_ml: ml,
     })
+    setAdding(false)
     if (error) {
       toast.error(t.failedToLogWater)
     } else {
@@ -132,7 +136,8 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
           <button
             key={ml}
             onClick={() => handleAdd(ml)}
-            className="flex-1 py-2 rounded-xl text-xs font-semibold text-cyan-400 bg-cyan-600/10 hover:bg-cyan-600/20 border border-cyan-600/20 transition-colors"
+            disabled={adding}
+            className="flex-1 py-2 rounded-xl text-xs font-semibold text-cyan-400 bg-cyan-600/10 hover:bg-cyan-600/20 border border-cyan-600/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             +{ml}{t.ml}
           </button>

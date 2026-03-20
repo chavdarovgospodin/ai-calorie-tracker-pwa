@@ -380,7 +380,8 @@ function AddFood() {
       <div className="flex bg-[#111118] border border-[#1E1E2E] rounded-xl p-1 mb-5">
         <button
           onClick={() => setTab('text')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
+          disabled={phase === 'analyzing'}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed ${
             tab === 'text' ? 'bg-indigo-600 text-white' : 'text-[#64748B] hover:text-[#F8FAFC]'
           }`}
         >
@@ -389,7 +390,8 @@ function AddFood() {
         </button>
         <button
           onClick={() => setTab('photo')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${
+          disabled={phase === 'analyzing'}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed ${
             tab === 'photo' ? 'bg-indigo-600 text-white' : 'text-[#64748B] hover:text-[#F8FAFC]'
           }`}
         >
@@ -594,7 +596,8 @@ function AddFood() {
             </button>
             <button
               onClick={handleSaveFavorite}
-              className="flex items-center justify-center gap-1.5 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl px-3 py-2.5 font-semibold transition-colors"
+              disabled={saving}
+              className="flex items-center justify-center gap-1.5 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl px-3 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title={t.saveToFavorites}
             >
               <Star size={16} />

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Star, CheckCircle, AlertCircle, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
@@ -39,6 +40,7 @@ export default function FoodDetailSheet({ entry, date, userId, onClose }: FoodDe
   const { t } = useLocale()
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const [saving, setSaving] = useState(false)
 
   if (!entry) return null
 
@@ -47,6 +49,8 @@ export default function FoodDetailSheet({ entry, date, userId, onClose }: FoodDe
   }
 
   async function handleAddToFavorites() {
+    if (saving) return
+    setSaving(true)
     const { data: existing } = await supabase
       .from('favorite_foods')
       .select('id, use_count')
@@ -74,9 +78,12 @@ export default function FoodDetailSheet({ entry, date, userId, onClose }: FoodDe
       toast.success(t.addedToFavorites)
     }
     queryClient.invalidateQueries({ queryKey: ['favorite_foods', userId] })
+    setSaving(false)
   }
 
   async function handleLogAgain() {
+    if (saving) return
+    setSaving(true)
     const { error } = await supabase.from('food_entries').insert({
       user_id: userId,
       date,
@@ -92,6 +99,7 @@ export default function FoodDetailSheet({ entry, date, userId, onClose }: FoodDe
     })
     if (error) {
       toast.error(t.failedToSave)
+      setSaving(false)
     } else {
       queryClient.invalidateQueries({ queryKey: ['food_entries', date] })
       toast.success(t.foodLogged)
@@ -177,16 +185,18 @@ export default function FoodDetailSheet({ entry, date, userId, onClose }: FoodDe
         <div className="flex gap-3">
           <button
             onClick={handleAddToFavorites}
-            className="flex-1 flex items-center justify-center gap-2 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl py-3 font-semibold text-sm transition-colors"
+            disabled={saving}
+            className="flex-1 flex items-center justify-center gap-2 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl py-3 font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Star size={15} />
+            {saving ? <span className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" /> : <Star size={15} />}
             {t.saveToFavorites}
           </button>
           <button
             onClick={handleLogAgain}
-            className="flex-[1.4] flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-3 font-semibold text-sm transition-colors"
+            disabled={saving}
+            className="flex-[1.4] flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-3 font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <CheckCircle size={15} />
+            {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle size={15} />}
             {t.logAgain}
           </button>
         </div>
