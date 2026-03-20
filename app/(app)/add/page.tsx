@@ -132,6 +132,7 @@ function AddFood() {
   const [validationError, setValidationError] = useState<string | null>(null)
   const [result, setResult] = useState<FoodAnalysis | null>(null)
   const [saving, setSaving] = useState(false)
+  const [isFavorite, setIsFavorite] = useState(false)
   const [loggingFavoriteId, setLoggingFavoriteId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -211,6 +212,15 @@ function AddFood() {
 
       setResult(data.result)
       setPhase('done')
+      if (user) {
+        supabase
+          .from('favorite_foods')
+          .select('id')
+          .eq('user_id', user.id)
+          .ilike('name', data.result.name)
+          .maybeSingle()
+          .then(({ data: fav }) => setIsFavorite(!!fav))
+      }
 
     } catch {
       setPhase('error')
@@ -222,51 +232,50 @@ function AddFood() {
     if (!result || !user) return
     setSaving(true)
 
-    const { data: existing } = await supabase
-      .from('favorite_foods')
-      .select('id, use_count')
-      .eq('user_id', user.id)
-      .ilike('name', result.name)
-      .maybeSingle()
-
-    if (existing) {
+    if (isFavorite) {
       const { error } = await supabase
         .from('favorite_foods')
-        .update({
-          calories: result.calories,
-          protein: result.protein,
-          carbs: result.carbs,
-          fat: result.fat,
-          fiber: result.fiber,
-          use_count: existing.use_count + 1,
-        })
-        .eq('id', existing.id)
-
+        .delete()
+        .eq('user_id', user.id)
+        .ilike('name', result.name)
       if (error) {
-        toast.error(t.failedToSaveFavorite)
+        toast.error(t.failedToRemoveFavorite)
       } else {
+        setIsFavorite(false)
         queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
-        toast.success(t.favoriteUpdated)
+        toast.success(t.removedFromFavorites)
       }
     } else {
-      const { error } = await supabase
+      const { data: existing } = await supabase
         .from('favorite_foods')
-        .insert({
-          user_id: user.id,
-          name: result.name,
-          calories: result.calories,
-          protein: result.protein,
-          carbs: result.carbs,
-          fat: result.fat,
-          fiber: result.fiber,
-          use_count: 1,
-        })
+        .select('id, use_count')
+        .eq('user_id', user.id)
+        .ilike('name', result.name)
+        .maybeSingle()
 
-      if (error) {
-        toast.error(t.failedToSaveFavorite)
+      if (existing) {
+        const { error } = await supabase
+          .from('favorite_foods')
+          .update({ calories: result.calories, protein: result.protein, carbs: result.carbs, fat: result.fat, fiber: result.fiber, use_count: existing.use_count + 1 })
+          .eq('id', existing.id)
+        if (error) {
+          toast.error(t.failedToSaveFavorite)
+        } else {
+          setIsFavorite(true)
+          queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
+          toast.success(t.favoriteUpdated)
+        }
       } else {
-        queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
-        toast.success(t.addedToFavorites)
+        const { error } = await supabase
+          .from('favorite_foods')
+          .insert({ user_id: user.id, name: result.name, calories: result.calories, protein: result.protein, carbs: result.carbs, fat: result.fat, fiber: result.fiber, use_count: 1 })
+        if (error) {
+          toast.error(t.failedToSaveFavorite)
+        } else {
+          setIsFavorite(true)
+          queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
+          toast.success(t.addedToFavorites)
+        }
       }
     }
 
@@ -602,10 +611,10 @@ function AddFood() {
             <button
               onClick={handleSaveFavorite}
               disabled={saving}
-              className="flex items-center justify-center gap-1.5 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl px-3 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title={t.saveToFavorites}
+              className="flex items-center justify-center bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl px-3 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title={isFavorite ? t.removeFromFavorites : t.saveToFavorites}
             >
-              <Star size={16} />
+              <Star size={16} fill={isFavorite ? 'currentColor' : 'none'} />
             </button>
           </div>
         </div>

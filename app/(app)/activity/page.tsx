@@ -111,6 +111,7 @@ function AddActivity() {
   const [validationError, setValidationError] = useState<string | null>(null)
   const [result, setResult] = useState<ActivityAnalysis | null>(null)
   const [saving, setSaving] = useState(false)
+  const [isFavorite, setIsFavorite] = useState(false)
   const [loggingFavoriteId, setLoggingFavoriteId] = useState<string | null>(null)
 
   const supabase = useMemo(() => createClient(), [])
@@ -158,23 +159,49 @@ function AddActivity() {
   async function handleSaveFavorite() {
     if (!result || !user) return
 
-    const { error } = await supabase
-      .from('favorite_activities')
-      .upsert(
-        {
-          user_id: user.id,
-          name: result.activityName,
-          calories_burned: Math.round(result.caloriesBurned),
-          use_count: 1,
-        },
-        { onConflict: 'user_id,name' },
-      )
-
-    if (error) {
-      toast.error(t.failedToSaveFavorite)
+    if (isFavorite) {
+      const { error } = await supabase
+        .from('favorite_activities')
+        .delete()
+        .eq('user_id', user.id)
+        .ilike('name', result.activityName)
+      if (error) {
+        toast.error(t.failedToRemoveFavorite)
+      } else {
+        setIsFavorite(false)
+        queryClient.invalidateQueries({ queryKey: ['favorite_activities', user.id] })
+        toast.success(t.removedFromFavorites)
+      }
     } else {
-      queryClient.invalidateQueries({ queryKey: ['favorite_activities', user.id] })
-      toast.success(t.addedToFavoritesActivity)
+      const { data: existing } = await supabase
+        .from('favorite_activities')
+        .select('id, use_count')
+        .eq('user_id', user.id)
+        .ilike('name', result.activityName)
+        .maybeSingle()
+
+      if (existing) {
+        const { error } = await supabase
+          .from('favorite_activities')
+          .update({ calories_burned: Math.round(result.caloriesBurned), use_count: existing.use_count + 1 })
+          .eq('id', existing.id)
+        if (!error) {
+          setIsFavorite(true)
+          queryClient.invalidateQueries({ queryKey: ['favorite_activities', user.id] })
+          toast.success(t.favoriteUpdated)
+        }
+      } else {
+        const { error } = await supabase
+          .from('favorite_activities')
+          .insert({ user_id: user.id, name: result.activityName, calories_burned: Math.round(result.caloriesBurned), use_count: 1 })
+        if (error) {
+          toast.error(t.failedToSaveFavorite)
+        } else {
+          setIsFavorite(true)
+          queryClient.invalidateQueries({ queryKey: ['favorite_activities', user.id] })
+          toast.success(t.addedToFavoritesActivity)
+        }
+      }
     }
   }
 
@@ -251,6 +278,16 @@ function AddActivity() {
 
       setResult(data.result)
       setPhase('done')
+      // Check if already in favorites
+      if (user) {
+        supabase
+          .from('favorite_activities')
+          .select('id')
+          .eq('user_id', user.id)
+          .ilike('name', data.result.activityName)
+          .maybeSingle()
+          .then(({ data: fav }) => setIsFavorite(!!fav))
+      }
 
     } catch {
       setPhase('error')
@@ -427,10 +464,10 @@ function AddActivity() {
             <button
               onClick={handleSaveFavorite}
               disabled={saving}
-              className="flex items-center justify-center gap-1.5 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl px-3 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title={t.saveToFavorites}
+              className="flex items-center justify-center bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl px-3 py-2.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title={isFavorite ? t.removeFromFavorites : t.saveToFavorites}
             >
-              <Star size={16} />
+              <Star size={16} fill={isFavorite ? 'currentColor' : 'none'} />
             </button>
           </div>
         </div>
