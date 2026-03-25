@@ -11,12 +11,25 @@ import { useLocale } from '@/lib/locale-context'
 
 type AnalysisPhase = 'idle' | 'analyzing' | 'done' | 'error'
 
-async function toBase64(file: File): Promise<string> {
+async function resizeAndToBase64(file: File, maxPx = 1024): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve((reader.result as string).split(',')[1])
-    reader.onerror = reject
-    reader.readAsDataURL(file)
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height))
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0, w, h)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+      resolve(dataUrl.split(',')[1])
+    }
+    img.onerror = reject
+    img.src = url
   })
 }
 
@@ -190,7 +203,7 @@ function AddFood() {
     try {
       let body: Record<string, string>
       if (tab === 'photo' && imageFile) {
-        const base64 = await toBase64(imageFile)
+        const base64 = await resizeAndToBase64(imageFile)
         body = { imageBase64: base64, mimeType: imageFile.type, description, locale }
       } else {
         body = { text, locale }
