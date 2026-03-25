@@ -203,8 +203,30 @@ Return ONLY valid JSON, no markdown:
     }
 
     const responseText = geminiResult.response.text().trim();
-    const jsonStr = responseText.replace(/```json\n?|\n?```/g, '').trim();
-    const parsed = FoodResultSchema.parse(JSON.parse(jsonStr));
+
+    let jsonStr = responseText.replace(/```json\n?|\n?```/g, '').trim();
+
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('No JSON object found in Gemini response:', responseText.slice(0, 200));
+      return NextResponse.json(
+        { valid: false, reason: 'Could not parse AI response', result: null },
+        { status: 200 },
+      );
+    }
+    jsonStr = jsonMatch[0];
+
+    let parsed;
+    try {
+      parsed = FoodResultSchema.parse(JSON.parse(jsonStr));
+    } catch (parseError) {
+      console.error('JSON parse/validation error:', parseError, 'Raw:', jsonStr.slice(0, 200));
+      return NextResponse.json(
+        { valid: false, reason: 'Could not parse AI response', result: null },
+        { status: 200 },
+      );
+    }
+
     return NextResponse.json(parsed);
   } catch (e) {
     console.error(e);
