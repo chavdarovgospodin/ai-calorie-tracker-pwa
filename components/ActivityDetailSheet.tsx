@@ -36,6 +36,10 @@ export default function ActivityDetailSheet({
       .ilike('name', entry.description)
       .maybeSingle()
       .then(({ data }) => setIsFavorite(!!data));
+    return () => {
+      setSaving(false);
+      setIsFavorite(false);
+    };
   }, [entry?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!entry) return null;
@@ -117,6 +121,7 @@ export default function ActivityDetailSheet({
     } else {
       queryClient.invalidateQueries({ queryKey: ['activity_entries', date] });
       toast.success(t.activityLogged);
+      setSaving(false);
       onClose();
     }
   }

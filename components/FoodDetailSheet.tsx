@@ -57,6 +57,10 @@ export default function FoodDetailSheet({
       .ilike('name', entry.name)
       .maybeSingle()
       .then(({ data }) => setIsFavorite(!!data));
+    return () => {
+      setSaving(false);
+      setIsFavorite(false);
+    };
   }, [entry?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!entry) return null;
@@ -147,6 +151,7 @@ export default function FoodDetailSheet({
     } else {
       queryClient.invalidateQueries({ queryKey: ['food_entries', date] });
       toast.success(t.foodLogged);
+      setSaving(false);
       onClose();
     }
   }
