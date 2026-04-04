@@ -2,7 +2,7 @@
 
 import { useState, useRef, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Sparkles, CheckCircle, AlertCircle, Flame, Star, Trash2 as TrashIcon } from 'lucide-react'
+import { ArrowLeft, Sparkles, CheckCircle, AlertCircle, Flame, Star, Trash2 as TrashIcon, PenLine } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
@@ -113,6 +113,10 @@ function AddActivity() {
   const [saving, setSaving] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
   const [loggingFavoriteId, setLoggingFavoriteId] = useState<string | null>(null)
+  const [activityTab, setActivityTab] = useState<'ai' | 'manual'>('ai')
+  const [manualActivityName, setManualActivityName] = useState('')
+  const [manualCaloriesBurned, setManualCaloriesBurned] = useState('')
+  const [manualActivitySaving, setManualActivitySaving] = useState(false)
 
   const supabase = useMemo(() => createClient(), [])
   const queryClient = useQueryClient()
@@ -203,6 +207,30 @@ function AddActivity() {
         }
       }
     }
+  }
+
+  async function handleManualActivitySave() {
+    if (!manualActivityName.trim()) { toast.error(t.pleaseDescribeWorkout); return }
+    const cal = parseInt(manualCaloriesBurned, 10)
+    if (!manualCaloriesBurned || isNaN(cal) || cal <= 0) { toast.error(t.pleaseEnterCaloriesBurned); return }
+    if (!user) return
+    setManualActivitySaving(true)
+    const { error } = await supabase.from('activity_entries').insert({
+      user_id: user.id,
+      date,
+      description: manualActivityName.trim(),
+      calories_burned: cal,
+      notes: notes || null,
+      ai_confidence: null,
+    })
+    if (error) {
+      toast.error(t.failedToSave)
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['activity_entries'] })
+      toast.success(t.activityLogged)
+      router.push(`/?date=${date}`)
+    }
+    setManualActivitySaving(false)
   }
 
   async function handleLogFavorite(fav: FavoriteActivity) {
@@ -349,47 +377,112 @@ function AddActivity() {
         </div>
       )}
 
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">{t.describeWorkout}</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-            maxLength={500}
-            placeholder={t.workoutPlaceholder}
-            className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-3 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors resize-none"
-          />
-          <p className={`text-xs mt-1 text-right ${description.length > 450 ? 'text-red-400' : 'text-[#64748B]'}`}>
-            {description.length} / 500
-          </p>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">{t.notes}</label>
-          <input
-            type="text"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder={t.howDidItFeel}
-            className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
-          />
-        </div>
+      {/* Tabs */}
+      <div className="flex bg-[#111118] border border-[#1E1E2E] rounded-xl p-1 mb-5 gap-1">
+        <button onClick={() => setActivityTab('ai')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${activityTab === 'ai' ? 'bg-indigo-600 text-white' : 'text-[#64748B] hover:text-[#F8FAFC]'}`}>
+          <Sparkles size={14} /> {t.aiAnalysis}
+        </button>
+        <button onClick={() => setActivityTab('manual')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${activityTab === 'manual' ? 'bg-indigo-600 text-white' : 'text-[#64748B] hover:text-[#F8FAFC]'}`}>
+          <PenLine size={14} /> {t.manual}
+        </button>
       </div>
 
-      {/* Analyze Button */}
-      <button
-        onClick={handleAnalyze}
-        disabled={phase === 'analyzing' || !description.trim() || description.length > 500}
-        className="w-full mt-5 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {phase === 'idle' && <><Sparkles size={16} /> {t.analyzeWithAI}</>}
-        {phase === 'analyzing' && <>{t.analyzing}</>}
-        {phase === 'done' && <><Sparkles size={16} /> {t.reanalyze}</>}
-        {phase === 'error' && <><Sparkles size={16} /> {t.analyzeWithAI}</>}
-      </button>
+      {activityTab === 'ai' && (
+        <>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">{t.describeWorkout}</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+                maxLength={500}
+                placeholder={t.workoutPlaceholder}
+                className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-3 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors resize-none"
+              />
+              <p className={`text-xs mt-1 text-right ${description.length > 450 ? 'text-red-400' : 'text-[#64748B]'}`}>
+                {description.length} / 500
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">{t.notes}</label>
+              <input
+                type="text"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder={t.howDidItFeel}
+                className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* Analyze Button */}
+          <button
+            onClick={handleAnalyze}
+            disabled={phase === 'analyzing' || !description.trim() || description.length > 500}
+            className="w-full mt-5 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {phase === 'idle' && <><Sparkles size={16} /> {t.analyzeWithAI}</>}
+            {phase === 'analyzing' && <>{t.analyzing}</>}
+            {phase === 'done' && <><Sparkles size={16} /> {t.reanalyze}</>}
+            {phase === 'error' && <><Sparkles size={16} /> {t.analyzeWithAI}</>}
+          </button>
+        </>
+      )}
+
+      {activityTab === 'manual' && (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">{t.activityName}</label>
+            <input
+              type="text"
+              value={manualActivityName}
+              onChange={(e) => setManualActivityName(e.target.value)}
+              placeholder={t.activityNamePlaceholder}
+              className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">{t.caloriesBurned}</label>
+            <div className="relative">
+              <input
+                type="number"
+                inputMode="numeric"
+                value={manualCaloriesBurned}
+                onChange={(e) => setManualCaloriesBurned(e.target.value)}
+                placeholder="0"
+                className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors pr-28"
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-amber-400">{t.kcalBurned}</span>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">{t.notes}</label>
+            <input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder={t.howDidItFeel}
+              className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
+            />
+          </div>
+          <button
+            onClick={handleManualActivitySave}
+            disabled={manualActivitySaving || !manualActivityName.trim() || !manualCaloriesBurned}
+            className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {manualActivitySaving
+              ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              : <CheckCircle size={16} />}
+            {t.logActivityButton}
+          </button>
+        </div>
+      )}
 
       {/* ANALYZING STATE */}
-      {phase === 'analyzing' && (
+      {activityTab === 'ai' && phase === 'analyzing' && (
         <div className="mt-5 bg-[#111118] border border-amber-500/30 rounded-2xl p-5">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
@@ -409,7 +502,7 @@ function AddActivity() {
       )}
 
       {/* ERROR STATE */}
-      {phase === 'error' && validationError && (
+      {activityTab === 'ai' && phase === 'error' && validationError && (
         <div className="mt-5 bg-[#111118] border border-red-500/30 rounded-2xl p-5">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -430,7 +523,7 @@ function AddActivity() {
       )}
 
       {/* DONE STATE */}
-      {phase === 'done' && result && (
+      {activityTab === 'ai' && phase === 'done' && result && (
         <div className="mt-4 bg-[#111118] border border-[#1E1E2E] rounded-2xl p-4">
           <div className="flex items-start justify-between mb-3">
             <div>

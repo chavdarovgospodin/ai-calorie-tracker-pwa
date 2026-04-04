@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Camera, FileText, Sparkles, CheckCircle, AlertCircle, Star, Trash2 as TrashIcon } from 'lucide-react'
+import { ArrowLeft, Camera, Sparkles, CheckCircle, AlertCircle, Star, Trash2 as TrashIcon, PenLine, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
@@ -129,7 +129,7 @@ function AddFood() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const date = searchParams.get('date') ?? new Date().toLocaleDateString('en-CA')
-  const [tab, setTab] = useState<'text' | 'photo'>('text')
+  const [tab, setTab] = useState<'text' | 'photo' | 'manual'>('text')
   const [text, setText] = useState('')
   const [description, setDescription] = useState('')
   const [quantity, setQuantity] = useState('')
@@ -147,6 +147,13 @@ function AddFood() {
   const [saving, setSaving] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
   const [loggingFavoriteId, setLoggingFavoriteId] = useState<string | null>(null)
+  const [manualName, setManualName] = useState('')
+  const [manualCalories, setManualCalories] = useState('')
+  const [manualProtein, setManualProtein] = useState('')
+  const [manualCarbs, setManualCarbs] = useState('')
+  const [manualFat, setManualFat] = useState('')
+  const [manualMacrosOpen, setManualMacrosOpen] = useState(false)
+  const [manualSaving, setManualSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const supabase = useMemo(() => createClient(), [])
@@ -295,6 +302,35 @@ function AddFood() {
     setSaving(false)
   }
 
+  async function handleManualSave() {
+    if (!manualName.trim()) { toast.error(t.pleaseEnterFoodName); return }
+    const calories = parseInt(manualCalories, 10)
+    if (!manualCalories || isNaN(calories) || calories <= 0) { toast.error(t.pleaseEnterCalories); return }
+    if (!user) return
+    setManualSaving(true)
+    const { error } = await supabase.from('food_entries').insert({
+      user_id: user.id,
+      date,
+      name: manualName.trim(),
+      calories,
+      protein: manualProtein ? parseFloat(manualProtein) : null,
+      carbs: manualCarbs ? parseFloat(manualCarbs) : null,
+      fat: manualFat ? parseFloat(manualFat) : null,
+      fiber: null,
+      quantity: quantity || null,
+      notes: notes || null,
+      ai_confidence: null,
+    })
+    if (error) {
+      toast.error(t.failedToSave)
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['food_entries'] })
+      toast.success(t.foodLogged)
+      router.push(`/?date=${date}`)
+    }
+    setManualSaving(false)
+  }
+
   async function handleLogFavorite(fav: FavoriteFood) {
     if (!user) return
     setLoggingFavoriteId(fav.id)
@@ -400,26 +436,18 @@ function AddFood() {
       )}
 
       {/* Tabs */}
-      <div className="flex bg-[#111118] border border-[#1E1E2E] rounded-xl p-1 mb-5">
-        <button
-          onClick={() => setTab('text')}
-          disabled={phase === 'analyzing'}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed ${
-            tab === 'text' ? 'bg-indigo-600 text-white' : 'text-[#64748B] hover:text-[#F8FAFC]'
-          }`}
-        >
-          <FileText size={15} />
-          {t.text}
+      <div className="flex bg-[#111118] border border-[#1E1E2E] rounded-xl p-1 mb-5 gap-1">
+        <button onClick={() => setTab('text')} disabled={phase === 'analyzing'}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed ${tab === 'text' ? 'bg-indigo-600 text-white' : 'text-[#64748B] hover:text-[#F8FAFC]'}`}>
+          <Sparkles size={14} /> {t.text}
         </button>
-        <button
-          onClick={() => setTab('photo')}
-          disabled={phase === 'analyzing'}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed ${
-            tab === 'photo' ? 'bg-indigo-600 text-white' : 'text-[#64748B] hover:text-[#F8FAFC]'
-          }`}
-        >
-          <Camera size={15} />
-          {t.photo}
+        <button onClick={() => setTab('photo')} disabled={phase === 'analyzing'}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed ${tab === 'photo' ? 'bg-indigo-600 text-white' : 'text-[#64748B] hover:text-[#F8FAFC]'}`}>
+          <Camera size={14} /> {t.photo}
+        </button>
+        <button onClick={() => setTab('manual')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'manual' ? 'bg-indigo-600 text-white' : 'text-[#64748B] hover:text-[#F8FAFC]'}`}>
+          <PenLine size={14} /> {t.manual}
         </button>
       </div>
 
@@ -493,6 +521,82 @@ function AddFood() {
         </div>
       )}
 
+      {/* Manual Tab */}
+      {tab === 'manual' && (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">{t.foodName}</label>
+            <input
+              type="text"
+              value={manualName}
+              onChange={(e) => setManualName(e.target.value)}
+              placeholder={t.foodNamePlaceholder}
+              className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">{t.kcal}</label>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={manualCalories}
+                onChange={(e) => setManualCalories(e.target.value)}
+                placeholder="0"
+                className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#F8FAFC] mb-1.5">{t.quantity}</label>
+              <input
+                type="text"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                placeholder={t.quantityPlaceholder}
+                className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-4 py-2.5 text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors"
+              />
+            </div>
+          </div>
+          <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl overflow-hidden">
+            <button
+              onClick={() => setManualMacrosOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 text-left"
+            >
+              <span className="text-sm text-[#64748B]">{t.macros} ({t.optional})</span>
+              <ChevronDown size={15} className={`text-[#64748B] transition-transform duration-200 ${manualMacrosOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {manualMacrosOpen && (
+              <div className="grid grid-cols-3 gap-3 px-4 pb-4 border-t border-[#1E1E2E] pt-3">
+                <div>
+                  <label className="block text-xs text-[#64748B] mb-1.5">{t.protein}</label>
+                  <div className="relative">
+                    <input type="number" inputMode="decimal" value={manualProtein} onChange={(e) => setManualProtein(e.target.value)} placeholder="0"
+                      className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-3 py-2 text-[#F8FAFC] placeholder-[#64748B] outline-none text-sm pr-7" />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-indigo-400">г</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-[#64748B] mb-1.5">{t.carbs}</label>
+                  <div className="relative">
+                    <input type="number" inputMode="decimal" value={manualCarbs} onChange={(e) => setManualCarbs(e.target.value)} placeholder="0"
+                      className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-3 py-2 text-[#F8FAFC] placeholder-[#64748B] outline-none text-sm pr-7" />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-emerald-400">г</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-[#64748B] mb-1.5">{t.fat}</label>
+                  <div className="relative">
+                    <input type="number" inputMode="decimal" value={manualFat} onChange={(e) => setManualFat(e.target.value)} placeholder="0"
+                      className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-3 py-2 text-[#F8FAFC] placeholder-[#64748B] outline-none text-sm pr-7" />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-amber-400">г</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Quantity & Notes */}
       <div className="space-y-4 mt-4">
         <div>
@@ -517,24 +621,37 @@ function AddFood() {
         </div>
       </div>
 
-      {/* Analyze Button */}
-      <button
-        onClick={handleAnalyze}
-        disabled={
-          phase === 'analyzing' ||
-          (tab === 'text' && (!text.trim() || text.length > 500)) ||
-          (tab === 'photo' && !imageFile)
-        }
-        className="w-full mt-5 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {phase === 'idle' && <><Sparkles size={16} /> {t.analyzeWithAI}</>}
-        {phase === 'analyzing' && <>{t.analyzing}</>}
-        {phase === 'done' && <><Sparkles size={16} /> {t.reanalyze}</>}
-        {phase === 'error' && <><Sparkles size={16} /> {t.analyzeWithAI}</>}
-      </button>
+      {/* Analyze / Save Button */}
+      {tab === 'manual' ? (
+        <button
+          onClick={handleManualSave}
+          disabled={manualSaving || !manualName.trim() || !manualCalories}
+          className="w-full mt-5 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {manualSaving
+            ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            : <CheckCircle size={16} />}
+          {t.saveToDiary}
+        </button>
+      ) : (
+        <button
+          onClick={handleAnalyze}
+          disabled={
+            phase === 'analyzing' ||
+            (tab === 'text' && (!text.trim() || text.length > 500)) ||
+            (tab === 'photo' && !imageFile)
+          }
+          className="w-full mt-5 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-5 py-2.5 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {phase === 'idle' && <><Sparkles size={16} /> {t.analyzeWithAI}</>}
+          {phase === 'analyzing' && <>{t.analyzing}</>}
+          {phase === 'done' && <><Sparkles size={16} /> {t.reanalyze}</>}
+          {phase === 'error' && <><Sparkles size={16} /> {t.analyzeWithAI}</>}
+        </button>
+      )}
 
       {/* ANALYZING STATE */}
-      {phase === 'analyzing' && (
+      {tab !== 'manual' && phase === 'analyzing' && (
         <div className="mt-5 bg-[#111118] border border-indigo-500/30 rounded-2xl p-5">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-10 h-10 rounded-full bg-indigo-600/20 flex items-center justify-center flex-shrink-0">
@@ -558,7 +675,7 @@ function AddFood() {
       )}
 
       {/* ERROR STATE */}
-      {phase === 'error' && validationError && (
+      {tab !== 'manual' && phase === 'error' && validationError && (
         <div className="mt-5 bg-[#111118] border border-red-500/30 rounded-2xl p-5">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -582,7 +699,7 @@ function AddFood() {
       )}
 
       {/* DONE STATE — result card */}
-      {phase === 'done' && result && (
+      {tab !== 'manual' && phase === 'done' && result && (
         <div className="mt-4 bg-[#111118] border border-[#1E1E2E] rounded-2xl p-4">
           <div className="flex items-start justify-between mb-3">
             <div>
