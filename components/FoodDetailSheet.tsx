@@ -11,6 +11,7 @@ import { useLocale } from '@/lib/locale-context';
 interface FoodDetailSheetProps {
   entry: FoodEntry | null;
   date: string;
+  today: string;
   userId: string;
   onClose: () => void;
 }
@@ -39,6 +40,7 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
 export default function FoodDetailSheet({
   entry,
   date,
+  today,
   userId,
   onClose,
 }: FoodDetailSheetProps) {
@@ -47,6 +49,8 @@ export default function FoodDetailSheet({
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [showLogOptions, setShowLogOptions] = useState(false);
+  const isPastDay = date < today;
 
   useEffect(() => {
     if (!entry) return;
@@ -129,12 +133,11 @@ export default function FoodDetailSheet({
     setSaving(false);
   }
 
-  async function handleLogAgain() {
-    if (saving) return;
+  async function doLog(targetDate: string) {
     setSaving(true);
     const { error } = await supabase.from('food_entries').insert({
       user_id: userId,
-      date,
+      date: targetDate,
       name: entry!.name,
       calories: entry!.calories,
       protein: entry!.protein,
@@ -149,10 +152,19 @@ export default function FoodDetailSheet({
       toast.error(t.failedToSave);
       setSaving(false);
     } else {
-      queryClient.invalidateQueries({ queryKey: ['food_entries', date] });
+      queryClient.invalidateQueries({ queryKey: ['food_entries', targetDate] });
       toast.success(t.foodLogged);
       setSaving(false);
       onClose();
+    }
+  }
+
+  function handleLogAgainClick() {
+    if (saving) return;
+    if (isPastDay) {
+      setShowLogOptions(true);
+    } else {
+      doLog(date);
     }
   }
 
@@ -241,10 +253,30 @@ export default function FoodDetailSheet({
           )}
         </div>
 
+        {/* Log date picker (shown only on past days) */}
+        {showLogOptions && (
+          <div className="mb-3 bg-[#0A0A0F] rounded-xl divide-y divide-[#1E1E2E] border border-[#1E1E2E]">
+            <button
+              onClick={() => doLog(date)}
+              disabled={saving}
+              className="w-full text-left px-4 py-3 text-sm text-[#F8FAFC] hover:bg-[#1A1A24] transition-colors rounded-t-xl disabled:opacity-50"
+            >
+              {t.logAgainForDate}
+            </button>
+            <button
+              onClick={() => doLog(today)}
+              disabled={saving}
+              className="w-full text-left px-4 py-3 text-sm text-indigo-400 font-semibold hover:bg-[#1A1A24] transition-colors rounded-b-xl disabled:opacity-50"
+            >
+              {t.logAgainForToday}
+            </button>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex gap-3">
           <button
-            onClick={handleLogAgain}
+            onClick={handleLogAgainClick}
             disabled={saving}
             className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-3 font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >

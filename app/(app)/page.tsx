@@ -307,8 +307,8 @@ function Dashboard() {
       email={userEmail}
       avatarLetter={avatarLetter}
     />
-    {user && <FoodDetailSheet entry={selectedFood} date={date} userId={user.id} onClose={() => setSelectedFood(null)} />}
-    {user && <ActivityDetailSheet entry={selectedActivity} date={date} userId={user.id} onClose={() => setSelectedActivity(null)} />}
+    {user && <FoodDetailSheet entry={selectedFood} date={date} today={today} userId={user.id} onClose={() => setSelectedFood(null)} />}
+    {user && <ActivityDetailSheet entry={selectedActivity} date={date} today={today} userId={user.id} onClose={() => setSelectedActivity(null)} />}
     </>
   )
 }

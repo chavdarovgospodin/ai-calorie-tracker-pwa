@@ -187,6 +187,8 @@ export const translations = {
     // Detail sheet
     addedAt: 'Added at',
     logAgain: 'Log again',
+    logAgainForDate: 'Log for this day',
+    logAgainForToday: 'Log for today',
 
     // Validation
     invalidAge: 'Age must be between 10 and 120',
@@ -399,6 +401,8 @@ export const translations = {
     // Detail sheet
     addedAt: 'Добавено в',
     logAgain: 'Добави отново',
+    logAgainForDate: 'Добави за този ден',
+    logAgainForToday: 'Добави за днес',
 
     // Validation
     invalidAge: 'Въведи възраст между 10 и 120',
