@@ -94,7 +94,7 @@
 | `app/api/analyze-food/route.ts:23-29` | `export const config = { api: { bodyParser: { sizeLimit } } }` — това е **Pages Router** синтаксис и **няма ефект** в App Router route handlers. Реалният лимит се контролира от `maxDuration = 30` + client-side resize. Виж [раздел 7 #4](#7-известни-несъответствия-и-бъгове). `analyze-activity` няма този блок изобщо. |
 | `app/api/analyze-food/route.ts:33` `MAX_BASE64_LENGTH` | базиран на 5 MB; коментарите в промпта и грешката казват «max 5MB», но клиентът праща resize-нат JPEG ≤1024px @ 0.85 quality, обикновено много под това. |
 | `next.config.ts:11` | `images.remotePatterns` разрешава `https://**` (всеки хост). Широко отворено; `photo_url` така или иначе не се попълва никъде (виж #6). |
-| `app/layout.tsx:70` | `<html lang="en" className="dark">` — езикът е хардкоднат `en` независимо от избрания locale; темата е винаги `dark` (няма light палитра). |
+| `app/layout.tsx:70` | `<html lang="en" className="dark">` — темата е винаги `dark` (няма light палитра, нарочно). `lang` в SSR е `en`, но `LocaleProvider` го пренасочва към активния locale при mount (от 2026-09-07). |
 | `.claude/settings.local.json` | Съдържа allow-правила и пътища от **друг проект** (`agency-site`) — наследени, не се отнасят за Calio. |
 
 ---
@@ -436,7 +436,11 @@ disabled» секции.** Единствените `eslint-disable` са лок
 7. ✅ **ПОПРАВЕНО 2026-09-07 — `formatTime` в detail sheets** сега ползва `t.dateLocale`
    (`FoodDetailSheet.tsx`, `ActivityDetailSheet.tsx`) вместо закованото `'bg-BG'`.
 
-8. **`<html lang="en">` винаги.** `app/layout.tsx:70` — не отразява избрания locale (a11y/SEO дребно).
+8. ✅ **ПОПРАВЕНО 2026-09-07 — `<html lang>`.** `LocaleProvider` вече синхронизира
+   `document.documentElement.lang` с активния locale (`lib/locale-context.tsx`). Server-ът
+   пак рендерира `lang="en"` в `app/layout.tsx` (root layout е server компонент, locale-ът е
+   client state) — коригира се при mount на provider-а. Ефектът важи само под `(app)` layout-а;
+   `(auth)` страниците са английски така или иначе (TASK-3).
 
 9. **Онбординг: race при първи `select('locale')`.**
    `LocaleProvider` mount-ва се едновременно с onboarding; ако профил още няма ред, `.single()`
@@ -518,5 +522,57 @@ Type-check: `npx tsc --noEmit` (в allow-листа на `.claude/settings.local
 | 2026-09-07 | **Fix #2:** `FavoriteActivity` тип получи `duration_minutes: number \| null` (изравняване със схемата). | `lib/types.ts` |
 | 2026-09-07 | **Fix #4:** премахнат no-op `export const config` (Pages Router bodyParser синтаксис) от `analyze-food`. | `app/api/analyze-food/route.ts` |
 | 2026-09-07 | **Fix #7:** `formatTime` в двата detail sheet-а ползва `t.dateLocale` вместо закованото `'bg-BG'`. | `components/FoodDetailSheet.tsx`, `components/ActivityDetailSheet.tsx` |
+| 2026-09-07 | Добавен раздел 11 «Backlog / отворени задачи» (TASK-1 = schema.sql vs прод разминаване; TASK-2..5). | `PROJECT_CONTEXT.md` |
+| 2026-09-07 | **Fix #8:** `LocaleProvider` синхронизира `<html lang>` с активния locale през effect. | `lib/locale-context.tsx` |
 
 <!-- Формат на нов ред: | YYYY-MM-DD | какво се промени и защо | засегнати файлове | -->
+
+---
+
+## 11. Backlog / отворени задачи
+
+Подредени по приоритет. Отметни (✅ + дата) при изпълнение и добави ред в дневника.
+
+### TASK-1 · `supabase/schema.sql` е разминат с реалната прод база
+**Приоритет:** среден · **Тип:** tech-debt / точност на документацията
+
+`schema.sql` описва обекти, които реалната прод база **няма**:
+- CHECK constraint-ите за `user_profiles.age` (10–120), `weight` (20–300), `height` (100–250)
+  от `schema.sql:137-143` — липсват в прод (потвърдено от `CREATE TABLE` дъмп на 2026-09-07).
+- Възможно е и други разминавания (CHECK-овете за food/activity калории/макроси, триггерите) —
+  не е сверявано обект по обект.
+
+**Защо е проблем:** агент/разработчик, който чете `schema.sql`, приема че тези защити ги има на
+DB ниво и може да пропусне клиентска валидация; или пише миграция, която конфликтва.
+
+**Как да се затвори:**
+1. Извади реалната схема: `pg_dump --schema-only --no-owner --no-privileges` (или Supabase
+   dashboard → Database → Schema visualizer / SQL `pg_dump`).
+2. Сравни обект по обект с `supabase/schema.sql`.
+3. Или (а) допиши липсващите constraint-и с idempotent миграция и остави `schema.sql` като
+   истина, или (б) пренапиши `schema.sql` да отразява точно прода и маркирай кои constraint-и
+   са само «желани, не приложени».
+4. Реши политиката: `schema.sql` = канонична цел, или = огледало на прода. Запиши я в раздел 9.
+
+**Внимание:** добавянето на CHECK на съществуваща таблица гърми, ако има редове извън диапазона —
+първо `SELECT` за нарушители, чак после `ADD CONSTRAINT`.
+
+### TASK-2 · `duration_minutes` от AI не се персистира
+**Приоритет:** нисък · **Тип:** липсваща функционалност
+
+`activity_entries` няма `duration_minutes` колона. AI връща `durationMinutes`, показва се в UI,
+но не се записва. `favorite_activities.duration_minutes` съществува, но също не се попълва при insert.
+За да работи: миграция + добавяне на полето в `activity_entries` insert-ите (`activity/page.tsx`,
+`ActivityDetailSheet.tsx`) + `ActivityEntry` тип.
+
+### TASK-3 · i18n: хардкоднати английски стрингове
+**Приоритет:** нисък-среден · **Тип:** i18n · виж [раздел 7 #6](#7-известни-несъответствия-и-бъгове)
+
+login/register, `not-found.tsx`, `ProfileSheet.tsx` меню, целия `OnboardingSteps.tsx`, water
+валидации в `settings/page.tsx`. Изисква нови ключове в `en` + `bg`. Собствен PR.
+
+### TASK-4 · Частичен React Query invalidation
+**Приоритет:** нисък · виж [раздел 7 #3](#7-известни-несъответствия-и-бъгове). Кръпка, не бъг.
+
+### TASK-5 · middleware DB заявка на всяка навигация
+**Приоритет:** нисък · виж [раздел 7 #10](#7-известни-несъответствия-и-бъгове). Оптимизация.
