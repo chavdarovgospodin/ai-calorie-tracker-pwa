@@ -40,15 +40,23 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Check onboarding completion
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('onboarding_completed')
-    .eq('user_id', user.id)
-    .single()
+  // Check onboarding completion. Prefer the flag mirrored into the JWT
+  // (user_metadata) so the common case costs no extra round-trip; only fall
+  // back to a DB read for older profiles that predate the mirror.
+  let onboardingCompleted = user.user_metadata?.onboarding_completed as
+    | boolean
+    | undefined
+  if (onboardingCompleted === undefined) {
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('onboarding_completed')
+      .eq('user_id', user.id)
+      .single()
+    onboardingCompleted = profile?.onboarding_completed ?? false
+  }
 
   // Redirect completed users away from onboarding
-  if (path === '/onboarding' && profile?.onboarding_completed) {
+  if (path === '/onboarding' && onboardingCompleted) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
@@ -57,7 +65,7 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
-  if (!profile?.onboarding_completed) {
+  if (!onboardingCompleted) {
     return NextResponse.redirect(new URL('/onboarding', request.url))
   }
 

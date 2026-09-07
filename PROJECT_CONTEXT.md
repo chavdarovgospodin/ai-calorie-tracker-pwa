@@ -78,7 +78,7 @@
   `apple-touch-icon.png`, `/api/`, `/auth/callback`):
   1. lognat user на `/login`|`/register` → redirect към `/`
   2. non-user навсякъде освен `/login`|`/register` → redirect към `/login`
-  3. чете `user_profiles.onboarding_completed`; ако не е завършен и рутът не е `/onboarding` → redirect към `/onboarding`; ако е завършен и рутът е `/onboarding` → redirect към `/`
+  3. чете `onboarding_completed` от JWT-то (`user.user_metadata.onboarding_completed`, налично от `getUser()` — нула extra заявки); само ако липсва (стар профил) → fallback към `user_profiles` read. Ако не е завършен и рутът не е `/onboarding` → redirect към `/onboarding`; ако е завършен и рутът е `/onboarding` → redirect към `/`. Огледалото се пише при завършване на онбординг и при `settings` save (`supabase.auth.updateUser`).
 - API routes (`analyze-food`, `analyze-activity`) правят собствен `supabase.auth.getUser()` и връщат
   401 ако няма user. **`/api/*` е изключен от middleware**, така че тази вътрешна проверка е
   единствената защита на endpoint-ите.
@@ -91,8 +91,7 @@
 
 | Място | Проблем |
 |---|---|
-| `app/api/analyze-food/route.ts:23-29` | `export const config = { api: { bodyParser: { sizeLimit } } }` — това е **Pages Router** синтаксис и **няма ефект** в App Router route handlers. Реалният лимит се контролира от `maxDuration = 30` + client-side resize. Виж [раздел 7 #4](#7-известни-несъответствия-и-бъгове). `analyze-activity` няма този блок изобщо. |
-| `app/api/analyze-food/route.ts:33` `MAX_BASE64_LENGTH` | базиран на 5 MB; коментарите в промпта и грешката казват «max 5MB», но клиентът праща resize-нат JPEG ≤1024px @ 0.85 quality, обикновено много под това. |
+| `app/api/analyze-food/route.ts` `MAX_BASE64_LENGTH` | базиран на 5 MB; коментарите в промпта и грешката казват «max 5MB», но клиентът праща resize-нат JPEG ≤1024px @ 0.85 quality, обикновено много под това. |
 | `next.config.ts:11` | `images.remotePatterns` разрешава `https://**` (всеки хост). Широко отворено; `photo_url` така или иначе не се попълва никъде (виж #6). |
 | `app/layout.tsx:70` | `<html lang="en" className="dark">` — темата е винаги `dark` (няма light палитра, нарочно). `lang` в SSR е `en`, но `LocaleProvider` го пренасочва към активния locale при mount (от 2026-09-07). |
 | `.claude/settings.local.json` | Съдържа allow-правила и пътища от **друг проект** (`agency-site`) — наследени, не се отнасят за Calio. |
@@ -212,7 +211,7 @@ next.config.ts               withPWA wrapper + images.remotePatterns https://** 
 | `activity_level` | TEXT NOT NULL | CHECK IN (`sedentary`,`lightly_active`,`moderately_active`,`very_active`,`extremely_active`) |
 | `daily_calorie_target` | INTEGER NOT NULL | изчислено от `calculateFromProfile()` |
 | `daily_water_goal` | INTEGER NOT NULL DEFAULT 2000 | добавено в `20260317_add_water.sql`; UI валидира 500–5000 |
-| `onboarding_completed` | BOOLEAN DEFAULT false | чете се от middleware |
+| `onboarding_completed` | BOOLEAN DEFAULT false | canonical в DB; огледалва се в JWT `user_metadata` за middleware (от 2026-09-07) |
 | `locale` | TEXT NOT NULL DEFAULT `'en'`, CHECK IN (`en`,`bg`) | ✅ добавена в `20260907094605_add_locale.sql`. Чете се/пише от `lib/locale-context.tsx`. (Преди 2026-09-07 колоната липсваше в прод и изборът на език не се пазеше.) |
 | `created_at`, `updated_at` | TIMESTAMPTZ DEFAULT now() | `updated_at` авто чрез триггер |
 
@@ -449,9 +448,11 @@ disabled» секции.** Единствените `eslint-disable` са лок
    `LocaleProvider` mount-ва се едновременно с onboarding; ако профил още няма ред, `.single()`
    връща грешка (игнорира се). Безвредно, но шумно в конзолата.
 
-10. **`middleware.ts` прави DB заявка (`user_profiles.onboarding_completed`) на всяка навигация.**
-    Не е кеширано — по едно четене на профил на request към guard-нат рут. Приемливо за мащаба,
-    но е N+1-ишко при много навигации.
+10. ✅ **ПОПРАВЕНО 2026-09-07 — `middleware.ts` DB заявка на всяка навигация.**
+    `onboarding_completed` вече се огледалва в JWT-то (`user_metadata`) при завършване на
+    онбординг и при `settings` save (`supabase.auth.updateUser({ data: {...} })`). Middleware
+    чете `user.user_metadata?.onboarding_completed` — вече налично от `getUser()`, нула extra
+    заявки. Само за стари профили без огледалото → fallback към стария `user_profiles` read.
 
 11. **`register` детекция на съществуващ email разчита на низов match** (`error.message.includes('already')`)
     и на Supabase quirk (`data.user.identities.length === 0`). Крехко спрямо промени в Supabase.
@@ -508,7 +509,9 @@ Type-check: `npx tsc --noEmit` (в allow-листа на `.claude/settings.local
    после zod parse с graceful fallback (връщай `200` + `{valid:false}` при parse провал, не 500).
 8. **Не добавяй light тема** без изрично искане — целият UI е dark с хекс литерали.
 9. **Не пипай `middleware.ts` guard логиката** без потвърждение — тя контролира целия достъп
-   и onboarding flow.
+   и onboarding flow. `onboarding_completed` живее едновременно в `user_profiles` (canonical)
+   и в JWT `user_metadata` (middleware fast path) — при промяна на единия синхронизирай другия
+   (`supabase.auth.updateUser({ data: { onboarding_completed } })`).
 10. **Изгорени калории и `caloriesBurned`** — винаги `Math.round` преди запис в `activity_entries`.
 11. **Актуализирай [раздел 10](#10-дневник-на-промените)** при всяка значима промяна и обнови
     датата в header-а.
@@ -529,6 +532,7 @@ Type-check: `npx tsc --noEmit` (в allow-листа на `.claude/settings.local
 | 2026-09-07 | **Fix #8:** `LocaleProvider` синхронизира `<html lang>` с активния locale през effect. | `lib/locale-context.tsx` |
 | 2026-09-07 | **Fix #6 (частично, TASK-3):** локализирани `OnboardingSteps`, `ProfileSheet` меню, `settings` (Profile heading + water goal валидации). Нови i18n ключове: `back`, `profile`, `measurementsHint`, `goalHint`, `deficitPerDay`, `maintainDesc`, `surplusPerDay`, `activityWeeklyHint`, `manualLogHint`, `invalidWaterGoal`. Остават login/register/404. | `lib/i18n.ts`, `components/OnboardingSteps.tsx`, `components/ProfileSheet.tsx`, `app/(app)/settings/page.tsx` |
 | 2026-09-07 | **Fix #3 (TASK-4):** нов `lib/query-keys.ts::invalidateDayData()` — всяко food/activity/water mutation вече invalidatва деня + `history` + `earliest_date`/`earliest_month`. Поправя стари History агрегати и заключена date-навигация след добавяне на запис за по-ранна дата. | `lib/query-keys.ts`, `app/(app)/page.tsx`, `app/(app)/add/page.tsx`, `app/(app)/activity/page.tsx`, `components/FoodDetailSheet.tsx`, `components/ActivityDetailSheet.tsx`, `components/WaterSection.tsx` |
+| 2026-09-07 | **Fix #10 (TASK-5):** `onboarding_completed` се огледалва в JWT `user_metadata`; middleware го чете оттам (нула extra заявки), fallback към DB само за стари профили. | `middleware.ts`, `app/(app)/onboarding/page.tsx`, `app/(app)/settings/page.tsx` |
 
 <!-- Формат на нов ред: | YYYY-MM-DD | какво се промени и защо | засегнати файлове | -->
 
@@ -583,5 +587,5 @@ server component). Затова не могат просто да ползват
 ### TASK-4 · ✅ ПОПРАВЕНО 2026-09-07 — query invalidation
 `lib/query-keys.ts::invalidateDayData()` въведен и приложен навсякъде. Виж [раздел 7 #3](#7-известни-несъответствия-и-бъгове).
 
-### TASK-5 · middleware DB заявка на всяка навигация
-**Приоритет:** нисък · виж [раздел 7 #10](#7-известни-несъответствия-и-бъгове). Оптимизация.
+### TASK-5 · ✅ ПОПРАВЕНО 2026-09-07 — middleware DB заявка на всяка навигация
+`onboarding_completed` огледално в JWT `user_metadata`. Виж [раздел 7 #10](#7-известни-несъответствия-и-бъгове).

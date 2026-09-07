@@ -144,6 +144,12 @@ export default function SettingsPage() {
     if (error) {
       toast.error(t.failedToSave + ': ' + error.message);
     } else {
+      // Keep the JWT mirror in sync (see middleware onboarding check).
+      if (user.user_metadata?.onboarding_completed !== true) {
+        await supabase.auth.updateUser({
+          data: { onboarding_completed: true },
+        });
+      }
       toast.success(t.profileUpdated);
       queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
     }

@@ -39,6 +39,8 @@ export default function OnboardingPage() {
     if (error) {
       toast.error(t.failedToSaveProfile + ': ' + error.message)
     } else {
+      // Mirror the flag into the JWT so middleware can skip the profile read.
+      await supabase.auth.updateUser({ data: { onboarding_completed: true } })
       toast.success(t.profileSaved)
       router.push('/')
       router.refresh()
