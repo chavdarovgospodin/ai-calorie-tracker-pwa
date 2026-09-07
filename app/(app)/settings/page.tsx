@@ -112,7 +112,7 @@ export default function SettingsPage() {
       return;
     }
     if (waterGoal === undefined) {
-      toast.error('Water goal must be between 500 and 5000 ml');
+      toast.error(t.invalidWaterGoal);
       return;
     }
     setSaving(true);
@@ -220,7 +220,7 @@ export default function SettingsPage() {
       {/* Profile fields */}
       <div className="space-y-4">
         <h2 className="text-sm font-semibold text-[#64748B] uppercase tracking-wide">
-          Profile
+          {t.profile}
         </h2>
 
         <div className="grid grid-cols-3 gap-3">
@@ -382,7 +382,7 @@ export default function SettingsPage() {
             step={100}
           />
           {waterGoalStr && waterGoal === undefined && (
-            <p className="text-xs text-red-400 mt-1">Water goal must be between 500 and 5000 ml</p>
+            <p className="text-xs text-red-400 mt-1">{t.invalidWaterGoal}</p>
           )}
         </div>
 

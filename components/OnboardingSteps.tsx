@@ -148,7 +148,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                 {t.yourMeasurements}
               </h2>
               <p className="text-[#64748B] text-sm mb-6">
-                We&apos;ll use these to calculate your calorie needs
+                {t.measurementsHint}
               </p>
               <div className="space-y-4">
                 <div>
@@ -245,28 +245,28 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                 {t.yourGoal}
               </h2>
               <p className="text-[#64748B] text-sm mb-6">
-                We&apos;ll adjust your calorie target accordingly
+                {t.goalHint}
               </p>
               <div className="space-y-3">
                 {[
                   {
                     value: 'lose' as const,
                     label: t.loseWeight,
-                    desc: '500 kcal deficit per day',
+                    desc: t.deficitPerDay,
                     Icon: TrendingDown,
                     color: 'text-blue-400',
                   },
                   {
                     value: 'maintain' as const,
                     label: t.maintainWeight,
-                    desc: 'Stay at current weight',
+                    desc: t.maintainDesc,
                     Icon: Minus,
                     color: 'text-indigo-400',
                   },
                   {
                     value: 'gain' as const,
                     label: t.gainMuscle,
-                    desc: '300 kcal surplus per day',
+                    desc: t.surplusPerDay,
                     Icon: TrendingUp,
                     color: 'text-emerald-400',
                   },
@@ -300,15 +300,14 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
                 {t.activityLevel}
               </h2>
               <p className="text-[#64748B] text-sm mb-4">
-                Choose your typical weekly activity level
+                {t.activityWeeklyHint}
               </p>
 
               {/* Info hint */}
               <div className="flex items-start gap-3 bg-indigo-600/10 border border-indigo-500/20 rounded-xl p-3 mb-6">
                 <span className="text-indigo-400 text-base mt-0.5 flex-shrink-0">💡</span>
                 <p className="text-xs text-indigo-300 leading-relaxed">
-                  If you plan to log your workouts manually in the app, choose a lower activity level.
-                  Your daily calorie target will automatically increase each time you log a workout.
+                  {t.manualLogHint}
                 </p>
               </div>
 
@@ -360,7 +359,7 @@ export default function OnboardingSteps({ onComplete }: OnboardingStepsProps) {
               onClick={() => setCurrentStep((s) => s - 1)}
               className="flex-1 bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-[#F8FAFC] rounded-xl px-5 py-2.5 font-semibold transition-colors"
             >
-              Back
+              {t.back}
             </button>
           )}
           <button

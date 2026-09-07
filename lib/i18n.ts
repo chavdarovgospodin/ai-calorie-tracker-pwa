@@ -46,11 +46,20 @@ export const translations = {
     veryActiveDesc: 'Hard exercise 6-7 days/week',
     extremelyActiveDesc: 'Very hard exercise, physical job',
     next: 'Next',
+    back: 'Back',
     finish: 'Finish',
     calculatedDailyTarget: 'Calculated daily target',
     kcalPerDay: 'kcal / day',
     profileSaved: 'Profile saved! Welcome to Calio 🎉',
     failedToSaveProfile: 'Failed to save profile',
+    measurementsHint: "We'll use these to calculate your calorie needs",
+    goalHint: "We'll adjust your calorie target accordingly",
+    deficitPerDay: '500 kcal deficit per day',
+    maintainDesc: 'Stay at current weight',
+    surplusPerDay: '300 kcal surplus per day',
+    activityWeeklyHint: 'Choose your typical weekly activity level',
+    manualLogHint:
+      'If you plan to log your workouts manually in the app, choose a lower activity level. Your daily calorie target will automatically increase each time you log a workout.',
 
     // Dashboard
     todaysFood: "Today's Food",
@@ -164,6 +173,7 @@ export const translations = {
 
     // Settings
     settings: 'Settings',
+    profile: 'Profile',
     logout: 'Logout',
     account: 'Account',
     goal: 'Goal',
@@ -210,6 +220,7 @@ export const translations = {
     liters: 'L',
     dailyWaterGoal: 'Daily water goal (ml)',
     waterGoalUpdated: 'Water goal updated!',
+    invalidWaterGoal: 'Water goal must be between 500 and 5000 ml',
 
     // Locale for dates
     dateLocale: 'en-US',
@@ -260,11 +271,20 @@ export const translations = {
     veryActiveDesc: 'Интензивни упражнения 6-7 дни/седмица',
     extremelyActiveDesc: 'Много интензивни упражнения, физическа работа',
     next: 'Напред',
+    back: 'Назад',
     finish: 'Завърши',
     calculatedDailyTarget: 'Изчислена дневна цел',
     kcalPerDay: 'ккал / ден',
     profileSaved: 'Профилът е запазен! Добре дошъл в Calio 🎉',
     failedToSaveProfile: 'Грешка при запазване на профила',
+    measurementsHint: 'Ще ги използваме, за да изчислим калорийните ти нужди',
+    goalHint: 'Ще коригираме калорийната ти цел според това',
+    deficitPerDay: '500 ккал дефицит на ден',
+    maintainDesc: 'Оставаш на текущото тегло',
+    surplusPerDay: '300 ккал излишък на ден',
+    activityWeeklyHint: 'Избери типичното си седмично ниво на активност',
+    manualLogHint:
+      'Ако смяташ да записваш тренировките си ръчно в приложението, избери по-ниско ниво на активност. Дневната ти калорийна цел ще се увеличава автоматично при всяка записана тренировка.',
 
     // Dashboard
     todaysFood: 'Храна за деня',
@@ -378,6 +398,7 @@ export const translations = {
 
     // Settings
     settings: 'Настройки',
+    profile: 'Профил',
     logout: 'Изход',
     account: 'Акаунт',
     goal: 'Цел',
@@ -424,6 +445,7 @@ export const translations = {
     liters: 'л',
     dailyWaterGoal: 'Дневна цел за вода (мл)',
     waterGoalUpdated: 'Целта е обновена!',
+    invalidWaterGoal: 'Целта за вода трябва да е между 500 и 5000 мл',
 
     // Locale for dates
     dateLocale: 'bg-BG',

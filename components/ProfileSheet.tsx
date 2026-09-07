@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Settings, History, LogOut } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useLocale } from '@/lib/locale-context'
 
 interface ProfileSheetProps {
   open: boolean
@@ -14,6 +15,7 @@ interface ProfileSheetProps {
 }
 
 export default function ProfileSheet({ open, onClose, email, avatarLetter }: ProfileSheetProps) {
+  const { t } = useLocale()
   const router = useRouter()
   const queryClient = useQueryClient()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -74,14 +76,14 @@ export default function ProfileSheet({ open, onClose, email, avatarLetter }: Pro
             className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#1A1A24] transition-colors text-left"
           >
             <Settings size={16} className="text-[#64748B]" />
-            <span className="text-[#F8FAFC] text-sm font-medium">Settings</span>
+            <span className="text-[#F8FAFC] text-sm font-medium">{t.settings}</span>
           </button>
           <button
             onClick={() => navigate('/history')}
             className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#1A1A24] transition-colors text-left"
           >
             <History size={16} className="text-[#64748B]" />
-            <span className="text-[#F8FAFC] text-sm font-medium">History</span>
+            <span className="text-[#F8FAFC] text-sm font-medium">{t.history}</span>
           </button>
         </div>
 
@@ -91,7 +93,7 @@ export default function ProfileSheet({ open, onClose, email, avatarLetter }: Pro
             className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-500/10 transition-colors text-left"
           >
             <LogOut size={16} className="text-red-400" />
-            <span className="text-red-400 text-sm font-medium">Log out</span>
+            <span className="text-red-400 text-sm font-medium">{t.logout}</span>
           </button>
         </div>
       </div>
