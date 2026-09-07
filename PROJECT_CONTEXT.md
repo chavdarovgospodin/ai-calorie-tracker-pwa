@@ -144,7 +144,8 @@ lib/
   calculations.ts            BMR (Mifflin-St Jeor) → TDEE (activity multiplier) → daily target (goal adjust)
                              lose -500 / maintain 0 / gain +300. getDynamicTarget(base, burned) = base+burned
   i18n.ts                    translations.en / translations.bg (голям обект), type Locale = 'en'|'bg'
-  locale-context.tsx         LocaleProvider: чете/пише user_profiles.locale; hook useLocale() → { locale, t, setLocale }
+  locale-context.tsx         LocaleProvider: чете/пише user_profiles.locale, sync-ва <html lang>; hook useLocale()
+  query-keys.ts              invalidateDayData(qc, kind, date) — единна invalidation политика за food/activity/water
   lastUser.ts                localStorage helpers: calio_last_user, calio_has_logged_in
   supabase/client.ts         createBrowserClient
   supabase/server.ts         createServerClient (SSR) — дефиниран, слабо използван
@@ -177,7 +178,10 @@ next.config.ts               withPWA wrapper + images.remotePatterns https://** 
   дати са лексикографски върху низа (`date < today`). DB колоната е `DATE`.
 - **i18n:** всеки видим текст минава през `const { t } = useLocale()` и ключ в `lib/i18n.ts`.
   Нов текст → добави ключа И в `en`, И в `bg`. Не хардкодвай стрингове в JSX.
-  Изключения, които вече са хардкоднати (за поправка): виж [раздел 7 #6](#7-известни-несъответствия-и-бъгове).
+  Остатъчни хардкоднати (login/register/404, извън `LocaleProvider`): виж [раздел 7 #6](#7-известни-несъответствия-и-бъгове) / TASK-3.
+- **Query invalidation:** food/activity/water mutation → **винаги** `invalidateDayData(queryClient, kind, date)`
+  от `lib/query-keys.ts` (не invalidatвай единичен key). Точните keys (`['profile', userId]`,
+  `['favorite_*', userId]`) си остават както са.
 - **Цветове:** тъмна палитра с хекс литерали в className-и (`#0A0A0F` фон, `#111118` карти,
   `#1E1E2E` бордъри, `#F8FAFC` текст, `#64748B` muted, indigo/emerald/amber/red акценти).
   Няма CSS-променливи за тях — копирай стиловете от съседни компоненти.
@@ -407,11 +411,14 @@ disabled» секции.** Единствените `eslint-disable` са лок
    Добавено `duration_minutes: number | null` в `lib/types.ts`. Стойността все още не се записва
    при insert и няма колона за нея в `activity_entries` — това е отделна задача (виж раздел 6 🔴).
 
-3. **Частичен query-key invalidation.**
-   Напр. `queryClient.invalidateQueries({ queryKey: ['food_entries', date] })` без `userId`
-   (напр. `app/(app)/page.tsx:129`, `add/page.tsx:327`). Работи заради prefix-match на React
-   Query, но е чупливо — ако някой добави сегмент между `date` и `userId`, invalidation-ът ще
-   спре да хваща. `add/page.tsx` дори invalidatва само `['food_entries']` (целия prefix).
+3. ✅ **ПОПРАВЕНО 2026-09-07 — query invalidation.**
+   Всяко food/activity/water mutation вече минава през `invalidateDayData()`
+   (`lib/query-keys.ts`), който invalidatва деня + `['history']` + `['earliest_date']` +
+   `['earliest_month']`. Преди това: (а) `history` месечните агрегати оставаха стари след
+   логване от дашборда до `staleTime`; (б) `earliest_date`/`earliest_month` никога не се
+   invalidatваха → добавяш запис за по-ранна дата → `DateNav`/History навигацията остава
+   заключена на старата граница до пълно презареждане. Също: `add`/`activity` вече не
+   invalidatват целия `['food_entries']`/`['activity_entries']` prefix (всеки кеширан ден).
 
 4. ✅ **ПОПРАВЕНО 2026-09-07 — no-op `export const config`** премахнат от `analyze-food`.
    `maxDuration = 30` остава. `analyze-activity` никога не е имал такъв блок.
@@ -421,17 +428,13 @@ disabled» секции.** Единствените `eslint-disable` са лок
    се killне на `maxDuration`, timeout-ът не помага; при бавен Gemini клиентът получава 500.
    Не е race condition, но е крехко под натоварване / cold start.
 
-6. **Хардкоднати стрингове, които заобикалят i18n:**
-   - `settings/page.tsx:116,385` — `'Water goal must be between 500 and 5000 ml'` (има ключ
-     `t.invalidAmount` / `t.invalidWaterAmount`, но не се ползва тук).
-   - `settings/page.tsx:223` — `<h2>Profile</h2>`.
-   - `OnboardingSteps.tsx` — «Back», «We'll use these to calculate…», «Stay at current weight»,
-     «500 kcal deficit per day», «300 kcal surplus per day», «Choose your typical weekly activity
-     level», info hint параграфа — всички твърд английски.
-   - `ProfileSheet.tsx:77,84,94` — «Settings», «History», «Log out» твърд английски (менюто от аватара).
-   - `not-found.tsx` — цялата 404 страница на английски.
-   - `login/page.tsx` / `register/page.tsx` — почти изцяло твърд английски, макар `lib/i18n.ts`
-     да има auth ключове.
+6. 🟡 **ЧАСТИЧНО ПОПРАВЕНО 2026-09-07 — хардкоднати i18n стрингове.**
+   Локализирани: `OnboardingSteps.tsx` (Back, hint текстове, описания на целите, 💡 параграф),
+   `ProfileSheet.tsx` (меню Settings/History/Log out), `settings/page.tsx` (`<h2>Profile</h2>`,
+   двете «Water goal must be between 500 and 5000 ml» → нов `t.invalidWaterGoal`).
+   **Остава (TASK-3):** `login/page.tsx`, `register/page.tsx`, `app/not-found.tsx` — рендерират
+   се извън `LocaleProvider` (няма запазен locale преди профил), нужно е решение за browser-
+   language детекция.
 
 7. ✅ **ПОПРАВЕНО 2026-09-07 — `formatTime` в detail sheets** сега ползва `t.dateLocale`
    (`FoodDetailSheet.tsx`, `ActivityDetailSheet.tsx`) вместо закованото `'bg-BG'`.
@@ -497,8 +500,8 @@ Type-check: `npx tsc --noEmit` (в allow-листа на `.claude/settings.local
    отбележи в PR-а, че трябва ръчно прилагане.
 4. **RLS:** всяка нова таблица с потребителски данни трябва да има `ENABLE ROW LEVEL SECURITY` +
    политика `USING (auth.uid() = user_id)`. Иначе client-side заявките ще течат чужди данни.
-5. **React Query keys:** спазвай съществуващата схема (раздел 3). Ако добавяш сегмент, провери
-   всички `invalidateQueries` с частичен key да продължат да хващат.
+5. **React Query keys:** спазвай съществуващата схема (раздел 3). food/activity/water mutation →
+   `invalidateDayData()` от `lib/query-keys.ts`, не единичен key.
 6. **Дати:** винаги `toLocaleDateString('en-CA')` за `YYYY-MM-DD`. Не въвеждай `Date` обекти в
    query keys или DB заявки.
 7. **API routes:** запази structure-а — auth check пръв, после валидация на входа, после Gemini,
@@ -524,6 +527,8 @@ Type-check: `npx tsc --noEmit` (в allow-листа на `.claude/settings.local
 | 2026-09-07 | **Fix #7:** `formatTime` в двата detail sheet-а ползва `t.dateLocale` вместо закованото `'bg-BG'`. | `components/FoodDetailSheet.tsx`, `components/ActivityDetailSheet.tsx` |
 | 2026-09-07 | Добавен раздел 11 «Backlog / отворени задачи» (TASK-1 = schema.sql vs прод разминаване; TASK-2..5). | `PROJECT_CONTEXT.md` |
 | 2026-09-07 | **Fix #8:** `LocaleProvider` синхронизира `<html lang>` с активния locale през effect. | `lib/locale-context.tsx` |
+| 2026-09-07 | **Fix #6 (частично, TASK-3):** локализирани `OnboardingSteps`, `ProfileSheet` меню, `settings` (Profile heading + water goal валидации). Нови i18n ключове: `back`, `profile`, `measurementsHint`, `goalHint`, `deficitPerDay`, `maintainDesc`, `surplusPerDay`, `activityWeeklyHint`, `manualLogHint`, `invalidWaterGoal`. Остават login/register/404. | `lib/i18n.ts`, `components/OnboardingSteps.tsx`, `components/ProfileSheet.tsx`, `app/(app)/settings/page.tsx` |
+| 2026-09-07 | **Fix #3 (TASK-4):** нов `lib/query-keys.ts::invalidateDayData()` — всяко food/activity/water mutation вече invalidatва деня + `history` + `earliest_date`/`earliest_month`. Поправя стари History агрегати и заключена date-навигация след добавяне на запис за по-ранна дата. | `lib/query-keys.ts`, `app/(app)/page.tsx`, `app/(app)/add/page.tsx`, `app/(app)/activity/page.tsx`, `components/FoodDetailSheet.tsx`, `components/ActivityDetailSheet.tsx`, `components/WaterSection.tsx` |
 
 <!-- Формат на нов ред: | YYYY-MM-DD | какво се промени и защо | засегнати файлове | -->
 
@@ -565,14 +570,18 @@ DB ниво и може да пропусне клиентска валидац�
 За да работи: миграция + добавяне на полето в `activity_entries` insert-ите (`activity/page.tsx`,
 `ActivityDetailSheet.tsx`) + `ActivityEntry` тип.
 
-### TASK-3 · i18n: хардкоднати английски стрингове
+### TASK-3 · i18n: остатъчни хардкоднати стрингове (login/register/404)
 **Приоритет:** нисък-среден · **Тип:** i18n · виж [раздел 7 #6](#7-известни-несъответствия-и-бъгове)
 
-login/register, `not-found.tsx`, `ProfileSheet.tsx` меню, целия `OnboardingSteps.tsx`, water
-валидации в `settings/page.tsx`. Изисква нови ключове в `en` + `bg`. Собствен PR.
+`login/page.tsx`, `register/page.tsx`, `app/not-found.tsx` са изцяло на английски. И трите
+рендерират **извън `LocaleProvider`** (auth екраните — преди профил; `not-found` — root-level
+server component). Затова не могат просто да ползват `useLocale()`.
+**Изисква решение:** (а) client компонент с `navigator.language` детекция (bg-* → BG), или
+(б) малък EN/BG toggle на auth екраните, който пише в `localStorage` и се чете при mount.
+`OnboardingSteps`, `ProfileSheet`, `settings` — вече локализирани (2026-09-07).
 
-### TASK-4 · Частичен React Query invalidation
-**Приоритет:** нисък · виж [раздел 7 #3](#7-известни-несъответствия-и-бъгове). Кръпка, не бъг.
+### TASK-4 · ✅ ПОПРАВЕНО 2026-09-07 — query invalidation
+`lib/query-keys.ts::invalidateDayData()` въведен и приложен навсякъде. Виж [раздел 7 #3](#7-известни-несъответствия-и-бъгове).
 
 ### TASK-5 · middleware DB заявка на всяка навигация
 **Приоритет:** нисък · виж [раздел 7 #10](#7-известни-несъответствия-и-бъгове). Оптимизация.
