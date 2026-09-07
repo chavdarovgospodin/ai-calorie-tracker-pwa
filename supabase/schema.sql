@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   goal TEXT NOT NULL CHECK (goal IN ('lose', 'maintain', 'gain')),
   activity_level TEXT NOT NULL CHECK (activity_level IN ('sedentary', 'lightly_active', 'moderately_active', 'very_active', 'extremely_active')),
   daily_calorie_target INTEGER NOT NULL,
+  daily_water_goal INTEGER NOT NULL DEFAULT 2000,
+  locale TEXT NOT NULL DEFAULT 'en' CHECK (locale IN ('en', 'bg')),
   onboarding_completed BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
