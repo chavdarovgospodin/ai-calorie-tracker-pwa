@@ -18,6 +18,7 @@ import FoodDetailSheet from '@/components/FoodDetailSheet'
 import ActivityDetailSheet from '@/components/ActivityDetailSheet'
 import type { FoodEntry, ActivityEntry, UserProfile } from '@/lib/types'
 import { useLocale } from '@/lib/locale-context'
+import { invalidateDayData } from '@/lib/query-keys'
 
 export default function DashboardPage() {
   return (
@@ -126,7 +127,7 @@ function Dashboard() {
     if (error) {
       toast.error(t.failedToDelete)
     } else {
-      queryClient.invalidateQueries({ queryKey: ['food_entries', date] })
+      invalidateDayData(queryClient, 'food_entries', date)
       toast.success(t.entryDeleted)
     }
   }
@@ -136,7 +137,7 @@ function Dashboard() {
     if (error) {
       toast.error(t.failedToDeleteActivity)
     } else {
-      queryClient.invalidateQueries({ queryKey: ['activity_entries', date] })
+      invalidateDayData(queryClient, 'activity_entries', date)
       toast.success(t.activityDeleted)
     }
   }

@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type { ActivityEntry } from '@/lib/types';
 import { useLocale } from '@/lib/locale-context';
+import { invalidateDayData } from '@/lib/query-keys';
 
 interface ActivityDetailSheetProps {
   entry: ActivityEntry | null;
@@ -122,7 +123,7 @@ export default function ActivityDetailSheet({
       toast.error(t.failedToSave);
       setSaving(false);
     } else {
-      queryClient.invalidateQueries({ queryKey: ['activity_entries', targetDate] });
+      invalidateDayData(queryClient, 'activity_entries', targetDate);
       toast.success(t.activityLogged);
       setSaving(false);
       onClose();

@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { ActivityAnalysis, FavoriteActivity } from '@/lib/types'
 import { useLocale } from '@/lib/locale-context'
+import { invalidateDayData } from '@/lib/query-keys'
 
 function ConfidenceBadge({ confidence }: { confidence: number }) {
   const { t } = useLocale()
@@ -226,7 +227,7 @@ function AddActivity() {
     if (error) {
       toast.error(t.failedToSave)
     } else {
-      queryClient.invalidateQueries({ queryKey: ['activity_entries'] })
+      invalidateDayData(queryClient, 'activity_entries', date)
       toast.success(t.activityLogged)
       router.push(`/?date=${date}`)
     }
@@ -257,7 +258,7 @@ function AddActivity() {
       .update({ use_count: fav.use_count + 1 })
       .eq('id', fav.id)
 
-    queryClient.invalidateQueries({ queryKey: ['activity_entries'] })
+    invalidateDayData(queryClient, 'activity_entries', date)
     queryClient.invalidateQueries({ queryKey: ['favorite_activities', user.id] })
     toast.success(`${fav.name} ${t.activityLogged}`)
     router.push(`/?date=${date}`)
@@ -339,7 +340,7 @@ function AddActivity() {
     if (error) {
       toast.error(t.failedToSave + ': ' + error.message)
     } else {
-      queryClient.invalidateQueries({ queryKey: ['activity_entries'] })
+      invalidateDayData(queryClient, 'activity_entries', date)
       toast.success(t.activityLogged)
       router.push(`/?date=${date}`)
     }

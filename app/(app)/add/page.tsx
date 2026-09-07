@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { FoodAnalysis, FavoriteFood } from '@/lib/types'
 import { useLocale } from '@/lib/locale-context'
+import { invalidateDayData } from '@/lib/query-keys'
 
 type AnalysisPhase = 'idle' | 'analyzing' | 'done' | 'error'
 
@@ -324,7 +325,7 @@ function AddFood() {
     if (error) {
       toast.error(t.failedToSave)
     } else {
-      queryClient.invalidateQueries({ queryKey: ['food_entries'] })
+      invalidateDayData(queryClient, 'food_entries', date)
       toast.success(t.foodLogged)
       router.push(`/?date=${date}`)
     }
@@ -360,7 +361,7 @@ function AddFood() {
       .update({ use_count: fav.use_count + 1 })
       .eq('id', fav.id)
 
-    queryClient.invalidateQueries({ queryKey: ['food_entries'] })
+    invalidateDayData(queryClient, 'food_entries', date)
     queryClient.invalidateQueries({ queryKey: ['favorite_foods', user.id] })
     toast.success(`${fav.name} ${t.foodLogged}`)
     router.push(`/?date=${date}`)
@@ -397,7 +398,7 @@ function AddFood() {
     if (error) {
       toast.error(t.failedToSave + ': ' + error.message)
     } else {
-      queryClient.invalidateQueries({ queryKey: ['food_entries'] })
+      invalidateDayData(queryClient, 'food_entries', date)
       toast.success(t.foodLogged)
       router.push(`/?date=${date}`)
     }

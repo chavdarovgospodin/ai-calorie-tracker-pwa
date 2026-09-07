@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { WaterEntry } from '@/lib/types'
 import { useLocale } from '@/lib/locale-context'
+import { invalidateDayData } from '@/lib/query-keys'
 
 const QUICK_ADD = [200, 250, 350, 500]
 
@@ -70,7 +71,7 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
     if (error) {
       toast.error(t.failedToLogWater)
     } else {
-      queryClient.invalidateQueries({ queryKey: ['water_entries', date] })
+      invalidateDayData(queryClient, 'water_entries', date)
       toast.success(t.waterLogged)
     }
   }
@@ -92,7 +93,7 @@ export default function WaterSection({ date, userId, dailyGoal }: WaterSectionPr
     if (error) {
       toast.error(t.failedToDeleteWater)
     } else {
-      queryClient.invalidateQueries({ queryKey: ['water_entries', date] })
+      invalidateDayData(queryClient, 'water_entries', date)
       toast.success(t.waterDeleted)
     }
   }

@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type { FoodEntry } from '@/lib/types';
 import { useLocale } from '@/lib/locale-context';
+import { invalidateDayData } from '@/lib/query-keys';
 
 interface FoodDetailSheetProps {
   entry: FoodEntry | null;
@@ -152,7 +153,7 @@ export default function FoodDetailSheet({
       toast.error(t.failedToSave);
       setSaving(false);
     } else {
-      queryClient.invalidateQueries({ queryKey: ['food_entries', targetDate] });
+      invalidateDayData(queryClient, 'food_entries', targetDate);
       toast.success(t.foodLogged);
       setSaving(false);
       onClose();
