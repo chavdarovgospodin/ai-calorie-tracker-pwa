@@ -20,6 +20,13 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('en')
   const supabase = createClient()
 
+  // Keep <html lang> in sync with the active locale. The server renders lang="en"
+  // (layout is a server component and the locale lives in the DB / this client state),
+  // so this corrects it once the provider mounts and on every switch.
+  useEffect(() => {
+    document.documentElement.lang = locale
+  }, [locale])
+
   useEffect(() => {
     async function loadLocale() {
       const { data: { user } } = await supabase.auth.getUser()
