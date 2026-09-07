@@ -49,7 +49,7 @@ export default function ActivityDetailSheet({
   if (!entry) return null;
 
   function formatTime(iso: string) {
-    return new Date(iso).toLocaleTimeString('bg-BG', {
+    return new Date(iso).toLocaleTimeString(t.dateLocale, {
       hour: '2-digit',
       minute: '2-digit',
     });

@@ -9,6 +9,7 @@ export interface UserProfile {
   activity_level: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extremely_active'
   daily_calorie_target: number
   daily_water_goal: number
+  locale: 'en' | 'bg'
   onboarding_completed: boolean
   created_at: string
   updated_at: string
@@ -93,6 +94,7 @@ export interface FavoriteActivity {
   user_id: string
   name: string
   calories_burned: number
+  duration_minutes: number | null
   use_count: number
   created_at: string
 }

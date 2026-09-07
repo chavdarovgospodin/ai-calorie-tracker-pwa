@@ -20,16 +20,10 @@ const FoodResultSchema = z.object({
     .nullable(),
 });
 
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '20mb',
-    },
-  },
-}
-
 export const maxDuration = 30
 
+// App Router route handlers have no `bodyParser` config knob (that was a Pages Router API).
+// Large payloads are kept out by client-side image resize plus this hard cap on the base64 string.
 const MAX_BASE64_LENGTH = Math.ceil((5 * 1024 * 1024 * 4) / 3);
 
 export async function POST(request: Request) {
