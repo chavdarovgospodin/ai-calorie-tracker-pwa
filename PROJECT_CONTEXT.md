@@ -151,10 +151,12 @@ lib/
   utils.ts                   cn() (clsx + tailwind-merge)
 
 supabase/
-  schema.sql                 Пълна начална схема (таблици, RLS, индекси, триггери, CHECK constraints)
-  migrations/
+  schema.sql                 ОГЛЕДАЛО на прод базата (таблици, RLS, индекси, триггери) — сверено 2026-09-10
+  migrations/                история; крайното състояние живее в schema.sql
     20260316135148_add_favorite_activities_unique.sql   UNIQUE(user_id, name) на favorite_activities
     20260317_add_water.sql                              daily_water_goal колона + water_entries таблица
+    20260907094605_add_locale.sql                       user_profiles.locale
+    20260910101128_add_activity_duration.sql            activity_entries.duration_minutes + CHECK
 
 middleware.ts                Auth + onboarding guard (виж раздел 2)
 next.config.ts               withPWA wrapper + images.remotePatterns https://**  + turbopack:{}
@@ -194,23 +196,29 @@ next.config.ts               withPWA wrapper + images.remotePatterns https://** 
 
 ### Supabase Postgres схема
 
-Дефиниция: `supabase/schema.sql` + 2 миграции. **RLS е ВКЛЮЧЕН на всички таблици**; политиката
-навсякъде е `USING (auth.uid() = user_id)` за `FOR ALL` — т.е. потребител вижда/пипа само своите
-редове. Затова client-side заявките директно към таблиците са безопасни.
+Дефиниция: `supabase/schema.sql` — **огледало на реалната прод база** (сверено 2026-09-10:
+колони + constraints + индекси). Миграциите в `supabase/migrations/` са историята; `schema.sql`
+е крайното състояние. **RLS е ВКЛЮЧЕН на всички таблици**; политиката навсякъде е
+`USING (auth.uid() = user_id)` за `FOR ALL` — потребител вижда/пипа само своите редове, затова
+client-side заявките директно към таблиците са безопасни.
+
+> **Range валидация:** базата НЯМА CHECK-ове за калории/макроси/age/weight/height. Единственият
+> range CHECK е `chk_activity_duration_minutes` (0–1440). Всичко останало се валидира само в
+> клиента. Не приемай, че DB-то пази граници.
 
 #### `user_profiles`
 | Поле | Тип | Бележки |
 |---|---|---|
 | `id` | UUID PK | |
 | `user_id` | UUID FK→auth.users, UNIQUE, NOT NULL | ON DELETE CASCADE |
-| `age` | INTEGER NOT NULL | CHECK 10–120 |
-| `weight` | DECIMAL(5,2) NOT NULL | kg, CHECK 20–300 |
-| `height` | DECIMAL(5,2) NOT NULL | cm, CHECK 100–250 |
+| `age` | INTEGER NOT NULL | **без DB CHECK** — само UI валидира 10–120 |
+| `weight` | DECIMAL(5,2) NOT NULL | kg, **без DB CHECK** — UI валидира 20–300 |
+| `height` | DECIMAL(5,2) NOT NULL | cm, **без DB CHECK** — UI валидира 100–250 |
 | `gender` | TEXT NOT NULL | CHECK IN (`male`,`female`) |
 | `goal` | TEXT NOT NULL | CHECK IN (`lose`,`maintain`,`gain`) |
 | `activity_level` | TEXT NOT NULL | CHECK IN (`sedentary`,`lightly_active`,`moderately_active`,`very_active`,`extremely_active`) |
 | `daily_calorie_target` | INTEGER NOT NULL | изчислено от `calculateFromProfile()` |
-| `daily_water_goal` | INTEGER NOT NULL DEFAULT 2000 | добавено в `20260317_add_water.sql`; UI валидира 500–5000 |
+| `daily_water_goal` | INTEGER NOT NULL DEFAULT 2000 | UI валидира 500–5000 (без DB CHECK) |
 | `onboarding_completed` | BOOLEAN DEFAULT false | canonical в DB; огледалва се в JWT `user_metadata` за middleware (от 2026-09-07) |
 | `locale` | TEXT NOT NULL DEFAULT `'en'`, CHECK IN (`en`,`bg`) | ✅ добавена в `20260907094605_add_locale.sql`. Чете се/пише от `lib/locale-context.tsx`. (Преди 2026-09-07 колоната липсваше в прод и изборът на език не се пазеше.) |
 | `created_at`, `updated_at` | TIMESTAMPTZ DEFAULT now() | `updated_at` авто чрез триггер |
@@ -222,9 +230,9 @@ next.config.ts               withPWA wrapper + images.remotePatterns https://** 
 | `user_id` | UUID FK, NOT NULL | |
 | `date` | DATE NOT NULL | ден на записа (YYYY-MM-DD) |
 | `name` | TEXT NOT NULL | |
-| `calories` | INTEGER NOT NULL | CHECK 0–10000 |
-| `protein`,`carbs`,`fat` | DECIMAL(6,2) NULL | CHECK 0–1000 |
-| `fiber` | DECIMAL(6,2) NULL | CHECK 0–500 |
+| `calories` | INTEGER NOT NULL | **без DB CHECK** (AI/manual стойности директно) |
+| `protein`,`carbs`,`fat` | DECIMAL(6,2) NULL | **без DB CHECK** |
+| `fiber` | DECIMAL(6,2) NULL | **без DB CHECK** |
 | `quantity` | TEXT NULL | свободен текст («1 чиния», «200г») |
 | `photo_url` | TEXT NULL | **никога не се записва** (виж #6) |
 | `ai_confidence` | DECIMAL(3,2) NULL | 0–1; NULL за ръчни/favorite записи |
@@ -240,8 +248,8 @@ next.config.ts               withPWA wrapper + images.remotePatterns https://** 
 | `user_id` | UUID FK, NOT NULL | |
 | `date` | DATE NOT NULL | |
 | `description` | TEXT NOT NULL | (не `name`!) |
-| `calories_burned` | INTEGER NOT NULL | CHECK 0–10000 |
-| `duration_minutes` | INTEGER NULL | CHECK 0–1440; от AI `durationMinutes`, NULL за ръчни записи. Миграция `20260910101128_add_activity_duration.sql` |
+| `calories_burned` | INTEGER NOT NULL | **без DB CHECK** — UI/AI стойности |
+| `duration_minutes` | INTEGER NULL | CHECK 0–1440 (`chk_activity_duration_minutes`, ЕДИНСТВЕНИЯТ range CHECK в базата); от AI `durationMinutes`, NULL за ръчни записи. Миграция `20260910101128_add_activity_duration.sql` (приложена в прод 2026-09-10) |
 | `ai_confidence` | DECIMAL(3,2) NULL | |
 | `notes` | TEXT NULL | |
 | `created_at`,`updated_at` | TIMESTAMPTZ | триггер |
@@ -263,19 +271,17 @@ next.config.ts               withPWA wrapper + images.remotePatterns https://** 
 `id`, `user_id` (FK, NOT NULL), `name` TEXT NOT NULL, `calories` INTEGER NOT NULL,
 `protein`/`carbs`/`fat`/`fiber` DECIMAL(6,2) NULL, `use_count` INTEGER NOT NULL DEFAULT 1,
 `created_at`.
-⚠️ **Прод базата има `UNIQUE (user_id, lower(name))`** (`favorite_foods_user_name_unique`) —
-`schema.sql` НЕ го отразява (там няма UNIQUE изобщо). Дедупликацията в кода е `.ilike('name', ...)`
-преди insert; DB-то я налага независимо. Прод индекси: `favorite_foods_user_name_unique`,
-`idx_favorite_foods_user_count (user_id, use_count DESC)` — `schema.sql` има само
-`idx_favorite_foods_user (user_id)`. Виж TASK-1.
+**`UNIQUE (user_id, lower(name))`** (`favorite_foods_user_name_unique`) — case-insensitive;
+кодът прави `.ilike('name', ...)` дедуп преди insert, DB-то я налага и без това.
+Индекс `idx_favorite_foods_user_count (user_id, use_count DESC)` (Quick Add списъкът чете
+ order by `use_count DESC`).
 
 #### `favorite_activities`
 `id`, `user_id` (FK, NOT NULL), `name` TEXT NOT NULL, `calories_burned` INTEGER NOT NULL,
 `duration_minutes` INTEGER NULL, `use_count` INTEGER NOT NULL DEFAULT 1, `created_at`.
-Прод базата има **два** UNIQUE-а: `favorite_activities_user_id_name_key (user_id, name)` (и в
-schema.sql) И `favorite_activities_user_name_unique (user_id, lower(name))` (НЕ е в schema.sql).
-Прод индекс `idx_favorite_activities_user_count (user_id, use_count DESC)` vs schema.sql
-`idx_favorite_activities_user (user_id)`. Виж TASK-1.
+**Два** UNIQUE-а (историческо): `favorite_activities_user_id_name_key (user_id, name)` И
+`favorite_activities_user_name_unique (user_id, lower(name))`. Индекс
+`idx_favorite_activities_user_count (user_id, use_count DESC)`.
 `lib/types.ts::FavoriteActivity` include-ва `duration_minutes: number | null`; **записва се**
 при save на любимо (от 2026-09-10) и се пренася в `activity_entries` при «Log again».
 
@@ -407,11 +413,9 @@ disabled» секции.** Единствените `eslint-disable` са лок
 1. ✅ **ПОПРАВЕНО 2026-09-07 — `user_profiles.locale` колона липсваше.**
    Потвърдено от прод схемата, че я нямаше. Добавена с миграция
    `20260907094605_add_locale.sql` (`TEXT NOT NULL DEFAULT 'en' CHECK (locale IN ('en','bg'))`),
-   синхронизиран `schema.sql`, добавен `locale` в `UserProfile` типа. **Миграцията трябва да се
-   пусне ръчно в прод.**
-   > Странично наблюдение: прод схемата на `user_profiles` НЯМА и CHECK constraint-ите за
-   > `age`/`weight`/`height` от `schema.sql:136-142`. `schema.sql` е разминат с реалността на
-   > няколко места — не разчитай сляпо на него, сверявай с реалната база.
+   синхронизиран `schema.sql`, добавен `locale` в `UserProfile` типа. Миграцията е пусната в
+   прод (потвърдено 2026-09-10). Разминаването `schema.sql` ↔ прод, което това извади наяве,
+   е затворено в TASK-1 (2026-09-10) — `schema.sql` вече е огледало на прода.
 
 2. ✅ **ПОПРАВЕНО 2026-09-07 / 2026-09-10 — `duration_minutes` (TASK-2).**
    2026-09-07: `duration_minutes` добавено в `FavoriteActivity` тип.
@@ -504,10 +508,11 @@ Type-check: `npx tsc --noEmit` (в allow-листа на `.claude/settings.local
 1. **Не комитвай `.env.local`** и не поставяй секрети в код/докове. Ако видиш изтекъл ключ — кажи.
 2. **Всеки нов видим текст минава през `lib/i18n.ts`** — добави ключа И в `en`, И в `bg`, ползвай
    `const { t } = useLocale()`. Не хардкодвай стрингове в JSX.
-3. **Схема на базата:** при промяна на таблица/колона — нов файл в `supabase/migrations/`
-   с timestamp префикс (`YYYYMMDDHHMMSS_описание.sql`) **и** синхронизирай `supabase/schema.sql`.
-   Използвай `IF NOT EXISTS` / `IF EXISTS`. Не разчитай, че миграциите се пускат автоматично —
-   отбележи в PR-а, че трябва ръчно прилагане.
+3. **Схема на базата:** `supabase/schema.sql` е **огледало на прода**, не wishlist — не слагай
+   в него constraint/индекс, който прод-ът няма. При промяна: нов файл в `supabase/migrations/`
+   (`YYYYMMDDHHMMSS_описание.sql`, idempotent — `IF NOT EXISTS`), приложи го **ръчно в прод**
+   (Supabase SQL Editor), после отрази крайното състояние в `schema.sql`. Отбележи в PR-а, че
+   иска ръчно прилагане. Range валидацията е клиентска — не добавяй DB CHECK-ове без нужда.
 4. **RLS:** всяка нова таблица с потребителски данни трябва да има `ENABLE ROW LEVEL SECURITY` +
    политика `USING (auth.uid() = user_id)`. Иначе client-side заявките ще течат чужди данни.
 5. **React Query keys:** спазвай съществуващата схема (раздел 3). food/activity/water mutation →
@@ -543,7 +548,7 @@ Type-check: `npx tsc --noEmit` (в allow-листа на `.claude/settings.local
 | 2026-09-07 | **Fix #3 (TASK-4):** нов `lib/query-keys.ts::invalidateDayData()` — всяко food/activity/water mutation вече invalidatва деня + `history` + `earliest_date`/`earliest_month`. Поправя стари History агрегати и заключена date-навигация след добавяне на запис за по-ранна дата. | `lib/query-keys.ts`, `app/(app)/page.tsx`, `app/(app)/add/page.tsx`, `app/(app)/activity/page.tsx`, `components/FoodDetailSheet.tsx`, `components/ActivityDetailSheet.tsx`, `components/WaterSection.tsx` |
 | 2026-09-07 | **Fix #10 (TASK-5):** `onboarding_completed` се огледалва в JWT `user_metadata`; middleware го чете оттам (нула extra заявки), fallback към DB само за стари профили. | `middleware.ts`, `app/(app)/onboarding/page.tsx`, `app/(app)/settings/page.tsx` |
 | 2026-09-10 | **TASK-2:** `activity_entries.duration_minutes` колона (миграция + schema.sql + `ActivityEntry` тип). Записва се от AI result и при save на любимо; пренася се при «Log again»; показва се в `ActivityCard` + `ActivityDetailSheet`. Нов i18n ключ `duration`. **Миграцията трябва да се пусне ръчно в прод.** | `supabase/migrations/20260910101128_add_activity_duration.sql`, `supabase/schema.sql`, `lib/types.ts`, `lib/i18n.ts`, `app/(app)/activity/page.tsx`, `components/ActivityDetailSheet.tsx`, `components/ActivityCard.tsx` |
-| 2026-09-10 | **TASK-1 (частично):** от прод индекси установени още разминавания със `schema.sql` — `favorite_foods`/`favorite_activities` имат `UNIQUE (user_id, lower(name))` и `(user_id, use_count DESC)` индекси, които `schema.sql` няма. Записано в раздел 4 и TASK-1. Чака колони/constraints дъмп за пълна ревизия. | `PROJECT_CONTEXT.md` |
+| 2026-09-10 | **TASK-1 ✅:** `schema.sql` сверен с прода (колони + constraints + индекси) и пренаписан като огледало. Махнати неприложените CHECK-ове (age/weight/height, food, activity calories); добавени `favorite_*_user_name_unique` (lower(name)) + `use_count DESC` индекси + `water_entries` в основния файл. Политика записана в правило #3. | `supabase/schema.sql`, `PROJECT_CONTEXT.md` |
 
 <!-- Формат на нов ред: | YYYY-MM-DD | какво се промени и защо | засегнати файлове | -->
 
@@ -553,39 +558,22 @@ Type-check: `npx tsc --noEmit` (в allow-листа на `.claude/settings.local
 
 Подредени по приоритет. Отметни (✅ + дата) при изпълнение и добави ред в дневника.
 
-### TASK-1 · `supabase/schema.sql` е разминат с реалната прод база
-**Приоритет:** среден · **Тип:** tech-debt / точност на документацията
+### TASK-1 · ✅ ПОПРАВЕНО 2026-09-10 — `schema.sql` сверен с прода
+**Политика (решена):** `schema.sql` = **огледало на прода**, не wishlist. Записана в правило #3.
 
-**Установени разминавания (частичен списък, `schema.sql` спрямо прода):**
-- **Липсват в прод:** CHECK-ове за `user_profiles.age` (10–120), `weight` (20–300),
-  `height` (100–250) от `schema.sql` (потвърдено от `CREATE TABLE` дъмп 2026-09-07).
-- **Липсват в `schema.sql`** (но ги има в прод, потвърдено от индекс дъмп 2026-09-10):
-  - `favorite_foods_user_name_unique` — `UNIQUE (user_id, lower(name))` (в `schema.sql` няма
-    UNIQUE на `favorite_foods` изобщо)
-  - `favorite_activities_user_name_unique` — `UNIQUE (user_id, lower(name))` (в `schema.sql`
-    има само `favorite_activities_user_id_name_key` на `(user_id, name)` — прод-ът има и двете)
-  - `idx_favorite_foods_user_count` / `idx_favorite_activities_user_count` —
-    `(user_id, use_count DESC)` (в `schema.sql` са само на `user_id`)
-- **Още не е сверявано:** колони/типове/defaults, CHECK-ове за food/activity, триггери.
+Сверено срещу прод дъмпове (колони + constraints + индекси, 2026-09-10). Промени в `schema.sql`:
+- Махнати **непри­ложените** CHECK-ове: `chk_profile_age/weight/height`, `chk_food_*` (5 бр.),
+  `chk_activity_calories_burned` — прод-ът ги няма. Оставен `chk_activity_duration_minutes`
+  (единственият range CHECK в базата).
+- Добавени липсващите: `favorite_foods_user_name_unique` / `favorite_activities_user_name_unique`
+  (`UNIQUE (user_id, lower(name))`); индекси `idx_favorite_{foods,activities}_user_count`
+  (`(user_id, use_count DESC)`) вместо старите на само `user_id`.
+- `water_entries` + `daily_water_goal` вкарани в основния файл (бяха само в миграция).
+- RLS enable + политики за всичките 6 таблици на едно място.
 
-**Защо е проблем:** агент/разработчик, който чете `schema.sql`, приема че тези защити ги има на
-DB ниво и може да пропусне клиентска валидация; или пише миграция, която конфликтва.
-
-**Какво остава да се извади от прода (заявки в §4 / по-долу):**
-- `information_schema.columns` за `public` — колони, типове, nullable, defaults
-- `information_schema.table_constraints` + `check_constraints` — CHECK/FK/UNIQUE/PK
-- `information_schema.triggers` за `public`
-- (индексите вече са налични — 2026-09-10)
-
-**Как да се затвори:**
-1. Сравни горните дъмпове обект по обект с `supabase/schema.sql`.
-2. Или (а) допиши липсващите обекти с idempotent миграция и остави `schema.sql` като истина,
-   или (б) пренапиши `schema.sql` да отразява точно прода.
-3. Реши политиката: `schema.sql` = канонична цел, или = огледало на прода. Запиши я в раздел 9.
-
-**Внимание:** добавянето на CHECK на съществуваща таблица гърми, ако има редове извън диапазона —
-първо `SELECT` за нарушители, чак после `ADD CONSTRAINT`. Аналогично за UNIQUE — първо провери
-за дубли по `lower(name)`.
+**Остатък:** триггерите (`trg_*_updated_at`) не са потвърдени от прод дъмп — оставени в
+`schema.sql` с бележка, защото кодът разчита `updated_at` да се авто-обновява. За 100% точност
+пусни `select * from information_schema.triggers where trigger_schema='public'`.
 
 ### TASK-2 · ✅ ПОПРАВЕНО 2026-09-10 — `duration_minutes` персистиране
 Миграция `20260910101128_add_activity_duration.sql` + `ActivityEntry` тип + запис от AI/favorite
