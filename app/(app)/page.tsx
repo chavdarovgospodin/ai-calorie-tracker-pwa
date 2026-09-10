@@ -158,6 +158,7 @@ function Dashboard() {
 
   const userEmail = user?.email ?? ''
   const avatarLetter = userEmail ? userEmail[0].toUpperCase() : '?'
+  const avatarUrl = profile?.avatar_url ?? null
 
   return (
     <>
@@ -167,9 +168,14 @@ function Dashboard() {
         <DateNav date={date} onChange={setDate} earliestDate={earliestDate ?? today} />
         <button
           onClick={() => setProfileOpen(true)}
-          className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold text-white hover:bg-indigo-500 transition-colors"
+          className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-bold text-white hover:bg-indigo-500 transition-colors overflow-hidden"
         >
-          {avatarLetter}
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            avatarLetter
+          )}
         </button>
       </div>
 
@@ -307,6 +313,7 @@ function Dashboard() {
       onClose={() => setProfileOpen(false)}
       email={userEmail}
       avatarLetter={avatarLetter}
+      avatarUrl={avatarUrl}
     />
     {user && <FoodDetailSheet entry={selectedFood} date={date} today={today} userId={user.id} onClose={() => setSelectedFood(null)} />}
     {user && <ActivityDetailSheet entry={selectedActivity} date={date} today={today} userId={user.id} onClose={() => setSelectedActivity(null)} />}

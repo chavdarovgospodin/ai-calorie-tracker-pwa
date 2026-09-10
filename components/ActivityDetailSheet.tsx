@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Flame, Star, CheckCircle, X } from 'lucide-react';
+import { Flame, Star, CheckCircle, X, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
@@ -30,7 +30,13 @@ export default function ActivityDetailSheet({
   const [saving, setSaving] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showLogOptions, setShowLogOptions] = useState(false);
+  const [editing, setEditing] = useState(false);
   const isPastDay = date < today;
+
+  const [fDescription, setFDescription] = useState('');
+  const [fCalories, setFCalories] = useState('');
+  const [fDuration, setFDuration] = useState('');
+  const [fNotes, setFNotes] = useState('');
 
   useEffect(() => {
     if (!entry) return;
@@ -44,8 +50,19 @@ export default function ActivityDetailSheet({
     return () => {
       setSaving(false);
       setIsFavorite(false);
+      setEditing(false);
     };
   }, [entry?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function startEditing() {
+    if (!entry) return;
+    setFDescription(entry.description);
+    setFCalories(String(entry.calories_burned));
+    setFDuration(entry.duration_minutes != null ? String(entry.duration_minutes) : '');
+    setFNotes(entry.notes ?? '');
+    setShowLogOptions(false);
+    setEditing(true);
+  }
 
   if (!entry) return null;
 
@@ -54,6 +71,50 @@ export default function ActivityDetailSheet({
       hour: '2-digit',
       minute: '2-digit',
     });
+  }
+
+  async function handleSaveEdit() {
+    if (saving) return;
+    const description = fDescription.trim();
+    if (!description) {
+      toast.error(t.pleaseDescribeWorkout);
+      return;
+    }
+    const calRaw = parseFloat(fCalories);
+    if (isNaN(calRaw) || calRaw < 0) {
+      toast.error(t.noNegativeValues);
+      return;
+    }
+    const calories_burned = Math.round(calRaw);
+    if (calories_burned <= 0) {
+      toast.error(t.caloriesMustBePositive);
+      return;
+    }
+    let duration_minutes: number | null = null;
+    if (fDuration.trim() !== '') {
+      const d = parseFloat(fDuration);
+      if (isNaN(d) || d < 0) {
+        toast.error(t.noNegativeValues);
+        return;
+      }
+      duration_minutes = Math.round(d);
+    }
+
+    setSaving(true);
+    const { error } = await supabase
+      .from('activity_entries')
+      .update({ description, calories_burned, duration_minutes, notes: fNotes.trim() || null })
+      .eq('id', entry!.id);
+    if (error) {
+      toast.error(t.failedToUpdate);
+      setSaving(false);
+    } else {
+      invalidateDayData(queryClient, 'activity_entries', date);
+      toast.success(t.activityUpdated);
+      setSaving(false);
+      setEditing(false);
+      onClose();
+    }
   }
 
   async function handleToggleFavorite() {
@@ -142,109 +203,193 @@ export default function ActivityDetailSheet({
     }
   }
 
+  const editInput =
+    'w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-3 py-2 text-sm text-[#F8FAFC] placeholder-[#64748B] outline-none transition-colors';
+
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/60" onClick={onClose} />
 
-      <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 max-w-[400px] mx-auto bg-[#111118] border border-[#1E1E2E] rounded-2xl px-4 pb-5 pt-4">
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 text-[#64748B] hover:text-[#F8FAFC] transition-colors"
-        >
-          <X size={18} />
-        </button>
-
-        {/* Header */}
-        <div className="flex items-start justify-between mb-4 pr-7 pt-1">
-          <div className="flex-1 min-w-0 mr-3">
-            <h3 className="font-bold text-[#F8FAFC] text-lg leading-tight mb-1.5">
-              {entry.description}
-            </h3>
-          </div>
-          <div className="text-right shrink-0">
-            <div className="flex items-center gap-1.5">
-              <Flame size={18} className="text-amber-400" />
-              <p className="text-3xl font-bold text-amber-400 leading-none">
-                {entry.calories_burned}
-              </p>
-            </div>
-            <p className="text-xs text-[#64748B] mt-0.5">{t.kcalBurned}</p>
-          </div>
+      <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 max-w-[400px] mx-auto bg-[#111118] border border-[#1E1E2E] rounded-2xl px-4 pb-5 pt-4 max-h-[90vh] overflow-y-auto">
+        <div className="absolute top-3 right-3 flex items-center gap-2">
+          {!editing && (
+            <button
+              onClick={startEditing}
+              className="text-[#64748B] hover:text-[#F8FAFC] transition-colors"
+              title={t.edit}
+            >
+              <Pencil size={16} />
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="text-[#64748B] hover:text-[#F8FAFC] transition-colors"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Info */}
-        <div className="bg-[#0A0A0F] rounded-xl px-3 py-1 mb-4 divide-y divide-[#1E1E2E]">
-          {entry.duration_minutes != null && entry.duration_minutes > 0 && (
-            <div className="flex justify-between py-2.5">
-              <span className="text-sm text-[#64748B]">{t.duration}</span>
-              <span className="text-sm text-[#F8FAFC]">
-                {entry.duration_minutes} {t.min}
-              </span>
+        {editing ? (
+          /* ---------- EDIT MODE ---------- */
+          <div className="pt-1 pr-14">
+            <label className="block text-xs text-[#64748B] mb-1">{t.activityName}</label>
+            <input
+              value={fDescription}
+              onChange={(e) => setFDescription(e.target.value)}
+              className={`${editInput} mb-3`}
+            />
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div>
+                <label className="block text-xs text-[#64748B] mb-1">{t.caloriesBurned}</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step={1}
+                  value={fCalories}
+                  onChange={(e) => setFCalories(e.target.value)}
+                  className={editInput}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-[#64748B] mb-1">
+                  {t.duration} ({t.min})
+                </label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step={1}
+                  value={fDuration}
+                  onChange={(e) => setFDuration(e.target.value)}
+                  className={editInput}
+                />
+              </div>
             </div>
-          )}
-          <div className="flex justify-between py-2.5">
-            <span className="text-sm text-[#64748B]">{t.addedAt}</span>
-            <span className="text-sm text-[#F8FAFC]">
-              {formatTime(entry.created_at)}
-            </span>
+            <label className="block text-xs text-[#64748B] mb-1">{t.notes}</label>
+            <input
+              value={fNotes}
+              onChange={(e) => setFNotes(e.target.value)}
+              className={`${editInput} mb-4`}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={handleSaveEdit}
+                disabled={saving}
+                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-3 font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <CheckCircle size={15} />
+                )}
+                {t.save}
+              </button>
+              <button
+                onClick={() => setEditing(false)}
+                disabled={saving}
+                className="flex items-center justify-center bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-[#F8FAFC] rounded-xl px-4 py-3 text-sm font-semibold transition-colors disabled:opacity-50"
+              >
+                {t.cancel}
+              </button>
+            </div>
           </div>
-          {entry.notes && (
-            <div className="flex justify-between py-2.5">
-              <span className="text-sm text-[#64748B]">{t.notes}</span>
-              <span className="text-sm text-[#F8FAFC] text-right max-w-[60%]">
-                {entry.notes}
-              </span>
+        ) : (
+          /* ---------- VIEW MODE ---------- */
+          <>
+            {/* Header */}
+            <div className="flex items-start justify-between mb-4 pr-14 pt-1">
+              <div className="flex-1 min-w-0 mr-3">
+                <h3 className="font-bold text-[#F8FAFC] text-lg leading-tight mb-1.5">
+                  {entry.description}
+                </h3>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <Flame size={18} className="text-amber-400" />
+                  <p className="text-3xl font-bold text-amber-400 leading-none">
+                    {entry.calories_burned}
+                  </p>
+                </div>
+                <p className="text-xs text-[#64748B] mt-0.5">{t.kcalBurned}</p>
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Log date picker (shown only on past days) */}
-        {showLogOptions && (
-          <div className="mb-3 bg-[#0A0A0F] rounded-xl divide-y divide-[#1E1E2E] border border-[#1E1E2E]">
-            <button
-              onClick={() => doLog(date)}
-              disabled={saving}
-              className="w-full text-left px-4 py-3 text-sm text-[#F8FAFC] hover:bg-[#1A1A24] transition-colors rounded-t-xl disabled:opacity-50"
-            >
-              {t.logAgainForDate}
-            </button>
-            <button
-              onClick={() => doLog(today)}
-              disabled={saving}
-              className="w-full text-left px-4 py-3 text-sm text-indigo-400 font-semibold hover:bg-[#1A1A24] transition-colors rounded-b-xl disabled:opacity-50"
-            >
-              {t.logAgainForToday}
-            </button>
-          </div>
+            {/* Info */}
+            <div className="bg-[#0A0A0F] rounded-xl px-3 py-1 mb-4 divide-y divide-[#1E1E2E]">
+              {entry.duration_minutes != null && entry.duration_minutes > 0 && (
+                <div className="flex justify-between py-2.5">
+                  <span className="text-sm text-[#64748B]">{t.duration}</span>
+                  <span className="text-sm text-[#F8FAFC]">
+                    {entry.duration_minutes} {t.min}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between py-2.5">
+                <span className="text-sm text-[#64748B]">{t.addedAt}</span>
+                <span className="text-sm text-[#F8FAFC]">
+                  {formatTime(entry.created_at)}
+                </span>
+              </div>
+              {entry.notes && (
+                <div className="flex justify-between py-2.5">
+                  <span className="text-sm text-[#64748B]">{t.notes}</span>
+                  <span className="text-sm text-[#F8FAFC] text-right max-w-[60%]">
+                    {entry.notes}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Log date picker (shown only on past days) */}
+            {showLogOptions && (
+              <div className="mb-3 bg-[#0A0A0F] rounded-xl divide-y divide-[#1E1E2E] border border-[#1E1E2E]">
+                <button
+                  onClick={() => doLog(date)}
+                  disabled={saving}
+                  className="w-full text-left px-4 py-3 text-sm text-[#F8FAFC] hover:bg-[#1A1A24] transition-colors rounded-t-xl disabled:opacity-50"
+                >
+                  {t.logAgainForDate}
+                </button>
+                <button
+                  onClick={() => doLog(today)}
+                  disabled={saving}
+                  className="w-full text-left px-4 py-3 text-sm text-indigo-400 font-semibold hover:bg-[#1A1A24] transition-colors rounded-b-xl disabled:opacity-50"
+                >
+                  {t.logAgainForToday}
+                </button>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleLogAgainClick}
+                disabled={saving}
+                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-3 font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <CheckCircle size={15} />
+                )}
+                {t.logAgain}
+              </button>
+              <button
+                onClick={handleToggleFavorite}
+                disabled={saving}
+                className="flex items-center justify-center bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl px-4 py-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title={isFavorite ? t.removeFromFavorites : t.saveToFavorites}
+              >
+                {saving ? (
+                  <span className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                ) : (
+                  <Star size={18} fill={isFavorite ? 'currentColor' : 'none'} />
+                )}
+              </button>
+            </div>
+          </>
         )}
-
-        {/* Actions */}
-        <div className="flex gap-3">
-          <button
-            onClick={handleLogAgainClick}
-            disabled={saving}
-            className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-3 font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {saving ? (
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <CheckCircle size={15} />
-            )}
-            {t.logAgain}
-          </button>
-          <button
-            onClick={handleToggleFavorite}
-            disabled={saving}
-            className="flex items-center justify-center bg-[#1A1A24] hover:bg-[#2A2A3E] border border-[#1E1E2E] text-amber-400 rounded-xl px-4 py-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title={isFavorite ? t.removeFromFavorites : t.saveToFavorites}
-          >
-            {saving ? (
-              <span className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
-            ) : (
-              <Star size={18} fill={isFavorite ? 'currentColor' : 'none'} />
-            )}
-          </button>
-        </div>
       </div>
     </>
   );

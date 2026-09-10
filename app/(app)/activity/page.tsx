@@ -213,8 +213,11 @@ function AddActivity() {
 
   async function handleManualActivitySave() {
     if (!manualActivityName.trim()) { toast.error(t.pleaseDescribeWorkout); return }
-    const cal = parseInt(manualCaloriesBurned, 10)
-    if (!manualCaloriesBurned || isNaN(cal) || cal <= 0) { toast.error(t.pleaseEnterCaloriesBurned); return }
+    const calRaw = parseFloat(manualCaloriesBurned)
+    if (!manualCaloriesBurned || isNaN(calRaw)) { toast.error(t.pleaseEnterCaloriesBurned); return }
+    if (calRaw < 0) { toast.error(t.noNegativeValues); return }
+    const cal = Math.round(calRaw)
+    if (cal <= 0) { toast.error(t.caloriesMustBePositive); return }
     if (!user) return
     setManualActivitySaving(true)
     const { error } = await supabase.from('activity_entries').insert({
@@ -222,6 +225,7 @@ function AddActivity() {
       date,
       description: manualActivityName.trim(),
       calories_burned: cal,
+      duration_minutes: null,
       notes: notes || null,
       ai_confidence: null,
     })
@@ -454,6 +458,8 @@ function AddActivity() {
               <input
                 type="number"
                 inputMode="numeric"
+                min={0}
+                step={1}
                 value={manualCaloriesBurned}
                 onChange={(e) => setManualCaloriesBurned(e.target.value)}
                 placeholder="0"

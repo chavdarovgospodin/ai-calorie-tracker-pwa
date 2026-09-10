@@ -12,9 +12,10 @@ interface ProfileSheetProps {
   onClose: () => void
   email: string
   avatarLetter: string
+  avatarUrl?: string | null
 }
 
-export default function ProfileSheet({ open, onClose, email, avatarLetter }: ProfileSheetProps) {
+export default function ProfileSheet({ open, onClose, email, avatarLetter, avatarUrl }: ProfileSheetProps) {
   const { t } = useLocale()
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -58,8 +59,13 @@ export default function ProfileSheet({ open, onClose, email, avatarLetter }: Pro
       >
         {/* Avatar + Info */}
         <div className="flex items-center gap-3 px-4 py-4 border-b border-[#1E1E2E]">
-          <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-base font-bold text-white flex-shrink-0">
-            {avatarLetter}
+          <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-base font-bold text-white flex-shrink-0 overflow-hidden">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              avatarLetter
+            )}
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-[#F8FAFC] text-sm truncate">

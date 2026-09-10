@@ -10,6 +10,7 @@ export interface UserProfile {
   daily_calorie_target: number
   daily_water_goal: number
   locale: 'en' | 'bg'
+  avatar_url: string | null
   onboarding_completed: boolean
   created_at: string
   updated_at: string

@@ -305,8 +305,14 @@ function AddFood() {
 
   async function handleManualSave() {
     if (!manualName.trim()) { toast.error(t.pleaseEnterFoodName); return }
-    const calories = parseInt(manualCalories, 10)
-    if (!manualCalories || isNaN(calories) || calories <= 0) { toast.error(t.pleaseEnterCalories); return }
+    const caloriesRaw = parseFloat(manualCalories)
+    if (!manualCalories || isNaN(caloriesRaw)) { toast.error(t.pleaseEnterCalories); return }
+    if (caloriesRaw < 0) { toast.error(t.noNegativeValues); return }
+    const calories = Math.round(caloriesRaw)
+    if (calories <= 0) { toast.error(t.caloriesMustBePositive); return }
+    const macros = [manualProtein, manualCarbs, manualFat].map((v) => (v ? parseFloat(v) : null))
+    if (macros.some((v) => v !== null && (isNaN(v) || v < 0))) { toast.error(t.noNegativeValues); return }
+    const [protein, carbs, fat] = macros
     if (!user) return
     setManualSaving(true)
     const { error } = await supabase.from('food_entries').insert({
@@ -314,9 +320,9 @@ function AddFood() {
       date,
       name: manualName.trim(),
       calories,
-      protein: manualProtein ? parseFloat(manualProtein) : null,
-      carbs: manualCarbs ? parseFloat(manualCarbs) : null,
-      fat: manualFat ? parseFloat(manualFat) : null,
+      protein,
+      carbs,
+      fat,
       fiber: null,
       quantity: quantity || null,
       notes: notes || null,
@@ -541,6 +547,8 @@ function AddFood() {
               <input
                 type="number"
                 inputMode="numeric"
+                min={0}
+                step={1}
                 value={manualCalories}
                 onChange={(e) => setManualCalories(e.target.value)}
                 placeholder="0"
@@ -571,7 +579,7 @@ function AddFood() {
                 <div>
                   <label className="block text-xs text-[#64748B] mb-1.5">{t.protein}</label>
                   <div className="relative">
-                    <input type="number" inputMode="decimal" value={manualProtein} onChange={(e) => setManualProtein(e.target.value)} placeholder="0"
+                    <input type="number" inputMode="decimal" min={0} step={0.1} value={manualProtein} onChange={(e) => setManualProtein(e.target.value)} placeholder="0"
                       className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-3 py-2 text-[#F8FAFC] placeholder-[#64748B] outline-none text-sm pr-7" />
                     <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-indigo-400">г</span>
                   </div>
@@ -579,7 +587,7 @@ function AddFood() {
                 <div>
                   <label className="block text-xs text-[#64748B] mb-1.5">{t.carbs}</label>
                   <div className="relative">
-                    <input type="number" inputMode="decimal" value={manualCarbs} onChange={(e) => setManualCarbs(e.target.value)} placeholder="0"
+                    <input type="number" inputMode="decimal" min={0} step={0.1} value={manualCarbs} onChange={(e) => setManualCarbs(e.target.value)} placeholder="0"
                       className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-3 py-2 text-[#F8FAFC] placeholder-[#64748B] outline-none text-sm pr-7" />
                     <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-emerald-400">г</span>
                   </div>
@@ -587,7 +595,7 @@ function AddFood() {
                 <div>
                   <label className="block text-xs text-[#64748B] mb-1.5">{t.fat}</label>
                   <div className="relative">
-                    <input type="number" inputMode="decimal" value={manualFat} onChange={(e) => setManualFat(e.target.value)} placeholder="0"
+                    <input type="number" inputMode="decimal" min={0} step={0.1} value={manualFat} onChange={(e) => setManualFat(e.target.value)} placeholder="0"
                       className="w-full bg-[#0A0A0F] border border-[#1E1E2E] focus:border-indigo-500 rounded-xl px-3 py-2 text-[#F8FAFC] placeholder-[#64748B] outline-none text-sm pr-7" />
                     <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-amber-400">г</span>
                   </div>

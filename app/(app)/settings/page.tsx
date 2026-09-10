@@ -10,6 +10,7 @@ import { calculateFromProfile } from '@/lib/calculations';
 import type { UserProfile } from '@/lib/types';
 import { useLocale } from '@/lib/locale-context';
 import type { Locale } from '@/lib/i18n';
+import AvatarUpload from '@/components/AvatarUpload';
 
 type ProfileFields = Pick<
   UserProfile,
@@ -191,9 +192,18 @@ export default function SettingsPage() {
       </div>
 
       {/* Account info */}
-      <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-4 mb-5">
-        <p className="text-xs text-[#64748B] mb-1">{t.account}</p>
-        <p className="font-medium text-[#F8FAFC]">{user?.email}</p>
+      <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-4 mb-5 space-y-4">
+        {user && (
+          <AvatarUpload
+            userId={user.id}
+            avatarUrl={profileData?.avatar_url ?? null}
+            email={user.email ?? ''}
+          />
+        )}
+        <div>
+          <p className="text-xs text-[#64748B] mb-1">{t.account}</p>
+          <p className="font-medium text-[#F8FAFC]">{user?.email}</p>
+        </div>
       </div>
 
       {/* Language Section */}

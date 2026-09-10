@@ -200,11 +200,28 @@ export const translations = {
     logAgain: 'Log again',
     logAgainForDate: 'Log for this day',
     logAgainForToday: 'Log for today',
+    edit: 'Edit',
+    save: 'Save',
+    cancel: 'Cancel',
+    entryUpdated: 'Entry updated',
+    activityUpdated: 'Activity updated',
+    failedToUpdate: 'Failed to update',
 
     // Validation
     invalidAge: 'Age must be between 10 and 120',
     invalidWeight: 'Weight must be between 20 and 300 kg',
     invalidHeight: 'Height must be between 100 and 250 cm',
+    noNegativeValues: 'Values cannot be negative',
+    caloriesMustBePositive: 'Calories must be greater than 0',
+
+    // Profile photo
+    changePhoto: 'Change photo',
+    uploadPhoto: 'Upload photo',
+    removePhoto: 'Remove photo',
+    photoUpdated: 'Profile photo updated',
+    photoRemoved: 'Profile photo removed',
+    failedToUploadPhoto: 'Failed to upload photo',
+    photoTooLarge: 'Image is too large (max 5MB)',
 
     // Water
     invalidWaterAmount: 'Please enter a valid amount (1–5000ml)',
@@ -426,11 +443,28 @@ export const translations = {
     logAgain: 'Добави отново',
     logAgainForDate: 'Добави за този ден',
     logAgainForToday: 'Добави за днес',
+    edit: 'Редактирай',
+    save: 'Запази',
+    cancel: 'Отказ',
+    entryUpdated: 'Записът е обновен',
+    activityUpdated: 'Активността е обновена',
+    failedToUpdate: 'Грешка при обновяване',
 
     // Validation
     invalidAge: 'Въведи възраст между 10 и 120',
     invalidWeight: 'Въведи тегло между 20 и 300 кг',
     invalidHeight: 'Въведи височина между 100 и 250 см',
+    noNegativeValues: 'Стойностите не могат да са отрицателни',
+    caloriesMustBePositive: 'Калориите трябва да са над 0',
+
+    // Profile photo
+    changePhoto: 'Смени снимката',
+    uploadPhoto: 'Качи снимка',
+    removePhoto: 'Премахни снимката',
+    photoUpdated: 'Профилната снимка е обновена',
+    photoRemoved: 'Профилната снимка е премахната',
+    failedToUploadPhoto: 'Грешка при качване на снимката',
+    photoTooLarge: 'Снимката е твърде голяма (макс. 5MB)',
 
     // Water
     invalidWaterAmount: 'Въведи валидно количество (1–5000мл)',

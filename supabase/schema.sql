@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   daily_calorie_target INTEGER NOT NULL,
   daily_water_goal INTEGER NOT NULL DEFAULT 2000,
   locale TEXT NOT NULL DEFAULT 'en' CHECK (locale IN ('en', 'bg')),
+  avatar_url TEXT,
   onboarding_completed BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
@@ -153,3 +154,17 @@ CREATE TRIGGER trg_food_entries_updated_at
 CREATE TRIGGER trg_activity_entries_updated_at
   BEFORE UPDATE ON activity_entries
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- =============================================
+-- Storage: 'avatars' bucket (public read, owner-write under <uid>/ prefix).
+-- The bucket is created outside SQL (dashboard / API); these are its policies.
+-- =============================================
+
+CREATE POLICY "Avatar images are publicly readable"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'avatars');
+
+CREATE POLICY "Users manage their own avatar"
+  ON storage.objects FOR ALL
+  USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text)
+  WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);

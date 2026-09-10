@@ -3,7 +3,7 @@
 > **Цел на този файл:** единствен източник на пълен контекст за проекта. Всеки бъдещ AI агент трябва да
 > прочете САМО този файл и да има достатъчно знание за системата, без да преоткрива нещата от кода.
 >
-> **Последна актуализация:** 2026-09-07 (втора итерация — locale колона + дребни fix-ове)
+> **Последна актуализация:** 2026-09-10 (числови fix-ове + edit режим + профилна снимка)
 >
 > **ЗАДЪЛЖИТЕЛНО:** при всяка значима промяна по кода/схемата/конфигурацията — добави ред в
 > [раздел 10 «Дневник на промените»](#10-дневник-на-промените) и обнови датата горе.
@@ -128,11 +128,12 @@ components/
   MacroBar.tsx               Прогрес бар за протеин/въглехидрати/мазнини
   FoodCard.tsx               Ред за храна в списъка; двойно-тап за delete; тап отваря detail sheet
   ActivityCard.tsx           Ред за активност; същия delete pattern
-  FoodDetailSheet.tsx        Модал за храна: "Log again" (+ избор ден за минали дни), toggle favorite
-  ActivityDetailSheet.tsx    Модал за активност: същото
+  FoodDetailSheet.tsx        Модал за храна: view + ✎ Edit режим (.update), "Log again", toggle favorite
+  ActivityDetailSheet.tsx    Модал за активност: същото (view + Edit + Log again + favorite)
   WaterSection.tsx           Вода: quick-add [200/250/350/500], прогрес, collapsible списък със записи
   DateNav.tsx                Стрелки ден напред/назад; "Днес"/"Вчера"/дата; спира на earliestDate и на днес
-  ProfileSheet.tsx           Dropdown от аватара: Settings / History / Log out
+  ProfileSheet.tsx           Dropdown от аватара: Settings / History / Log out (показва avatar_url)
+  AvatarUpload.tsx           Профилна снимка: resize 512px → Storage bucket avatars → user_profiles.avatar_url
   OnboardingSteps.tsx        4-стъпков онбординг: пол → мерки → цел → ниво активност; live calorie preview
   ui/                        shadcn-style примитиви (button, card, input, label, badge, avatar, progress,
                              separator, tabs, sonner). Част от тях може да не се ползват.
@@ -157,6 +158,7 @@ supabase/
     20260317_add_water.sql                              daily_water_goal колона + water_entries таблица
     20260907094605_add_locale.sql                       user_profiles.locale
     20260910101128_add_activity_duration.sql            activity_entries.duration_minutes + CHECK
+    20260910120000_add_avatar.sql                       user_profiles.avatar_url + storage RLS
 
 middleware.ts                Auth + onboarding guard (виж раздел 2)
 next.config.ts               withPWA wrapper + images.remotePatterns https://**  + turbopack:{}
@@ -221,6 +223,7 @@ client-side заявките директно към таблиците са б�
 | `daily_water_goal` | INTEGER NOT NULL DEFAULT 2000 | UI валидира 500–5000 (без DB CHECK) |
 | `onboarding_completed` | BOOLEAN DEFAULT false | canonical в DB; огледалва се в JWT `user_metadata` за middleware (от 2026-09-07) |
 | `locale` | TEXT NOT NULL DEFAULT `'en'`, CHECK IN (`en`,`bg`) | ✅ добавена в `20260907094605_add_locale.sql`. Чете се/пише от `lib/locale-context.tsx`. (Преди 2026-09-07 колоната липсваше в прод и изборът на език не се пазеше.) |
+| `avatar_url` | TEXT NULL | public URL на профилната снимка (Storage bucket `avatars`, `<uid>/avatar.jpg`). Миграция `20260910120000_add_avatar.sql`. |
 | `created_at`, `updated_at` | TIMESTAMPTZ DEFAULT now() | `updated_at` авто чрез триггер |
 
 #### `food_entries`
@@ -288,6 +291,14 @@ client-side заявките директно към таблиците са б�
 #### Триггери
 `update_updated_at()` PL/pgSQL функция + `BEFORE UPDATE` триггери на `user_profiles`,
 `food_entries`, `activity_entries` (не на water/favorites).
+
+#### Storage
+Bucket **`avatars`** — public-read, всеки user пише само под `<uid>/` префикс (RLS политики в
+`schema.sql` / `20260910120000_add_avatar.sql`). Файл: `<uid>/avatar.jpg`, `upsert:true`,
+resize до 512px client-side (`components/AvatarUpload.tsx`). Public URL + `?v=timestamp`
+cache-bust се записва в `user_profiles.avatar_url`.
+> ⚠️ Bucket-ът се създава **ръчно** (Supabase dashboard → Storage → New bucket, name `avatars`,
+> Public ✅) — не от SQL. Чак после пусни миграцията (политиките).
 
 ### API endpoints (Next.js route handlers)
 
@@ -369,7 +380,11 @@ disabled» секции.** Единствените `eslint-disable` са лок
 - **Gemini интеграция** — двата route-а, single-call validate+analyze, zod парсване, graceful
   fallback при невалиден JSON, 25s timeout.
 - **Detail sheets** (Food/Activity): «Log again» за текущия ден; за минал ден — избор
-  «за този ден» / «за днес»; toggle любимо.
+  «за този ден» / «за днес»; toggle любимо; **✎ Edit режим** (2026-09-10) — молив бутон →
+  полетата стават input-и → `.update()` на записа + `invalidateDayData`.
+- **Profile снимка** (2026-09-10): `AvatarUpload` в `settings` (Account карта) — client resize
+  до 512px, upload в Supabase Storage bucket `avatars` под `<uid>/avatar.jpg`, public URL в
+  `user_profiles.avatar_url`. Показва се на дашборд аватара и в `ProfileSheet`.
 - **Вода** (`WaterSection.tsx`): quick-add 200/250/350/500 ml, прогрес към `daily_water_goal`,
   collapsible списък със записи + delete.
 - **История** (`history/page.tsx`): месечна навигация (спира на текущия месец и на най-ранния
@@ -384,8 +399,9 @@ disabled» секции.** Единствените `eslint-disable` са лок
 
 - **`export const config` body size limit** — премахнат от `analyze-food` на 2026-09-07 (беше
   no-op в App Router). Реалната защита срещу големи заявки е client resize + `MAX_BASE64_LENGTH`.
-- **`photo_url`** — колоната съществува, `FoodEntry` типът я има, но **никъде не се качва снимка
-  и не се записва URL**. Снимката отива само към Gemini като base64 и се забравя.
+- **`food_entries.photo_url`** — колоната съществува, `FoodEntry` типът я има, но **храна-снимка
+  никъде не се качва в Storage**. Снимката отива само към Gemini като base64 и се забравя.
+  (Профилната снимка — отделно, тя се качва: виж `avatar_url` / `AvatarUpload`.)
 - **`components/ui/*`** — генерирани shadcn примитиви; част (tabs, avatar, badge, progress,
   separator, card) може да не се използват от текущите екрани. Провери с grep преди да разчиташ.
 - **`lib/supabase/server.ts`** — дефиниран, но API routes и middleware правят свои inline клиенти;
@@ -395,7 +411,7 @@ disabled» секции.** Единствените `eslint-disable` са лок
 
 - **Няма тестове** (никакъв test runner, никакви `*.test.*` / `*.spec.*` файлове; `/coverage` в gitignore «за всеки случай»).
 - **Няма CI/CD** конфигурация в repo-то (нито `.github/`, нито `vercel.json`).
-- **Няма редакция на съществуващ запис** — само create + delete. «Log again» дублира записа.
+- **Редакция на записи** — ✅ има от 2026-09-10 (detail sheets edit режим). «Log again» пак дублира (нарочно — то е за повторно логване, не за корекция).
 - **Няма изтриване на акаунт / export на данни** от UI (само `ON DELETE CASCADE` на ниво DB).
 - **Няма rate limiting** на AI endpoint-ите (освен per-request auth и timeout).
 - **Няма offline режим** отвъд това, което next-pwa кешира по подразбиране; заявките към Supabase
@@ -470,6 +486,13 @@ disabled» секции.** Единствените `eslint-disable` са лок
 11. **`register` детекция на съществуващ email разчита на низов match** (`error.message.includes('already')`)
     и на Supabase quirk (`data.user.identities.length === 0`). Крехко спрямо промени в Supabase.
 
+12. ✅ **ПОПРАВЕНО 2026-09-10 — числови полета: дробни/отрицателни.**
+    Manual save на храна/активност ползваше `parseInt` → `1.3` даваше `1`, `0.3` → `0` →
+    подвеждаща грешка «въведи калории». Отрицателни: `<input type=number>` без `min` позволяваше
+    `-50`; макросите се записваха отрицателни (няма DB CHECK). Fix: `parseFloat` + `Math.round`,
+    guard `< 0` → `t.noNegativeValues`, `<= 0` → `t.caloriesMustBePositive`, `min={0}` + `step`
+    на всички number input-и (add manual, activity manual, edit режими на двата sheet-а).
+
 ---
 
 ## 8. Deploy / билд
@@ -526,7 +549,10 @@ Type-check: `npx tsc --noEmit` (в allow-листа на `.claude/settings.local
    и onboarding flow. `onboarding_completed` живее едновременно в `user_profiles` (canonical)
    и в JWT `user_metadata` (middleware fast path) — при промяна на единия синхронизирай другия
    (`supabase.auth.updateUser({ data: { onboarding_completed } })`).
-10. **Изгорени калории и `caloriesBurned`** — винаги `Math.round` преди запис в `activity_entries`.
+10. **Числови стойности:** `parseFloat` (не `parseInt`) + `Math.round` при запис; guard `< 0`
+    (→ `t.noNegativeValues`) и за калории `<= 0` (→ `t.caloriesMustBePositive`); всеки
+    `<input type="number">` да има `min={0}` + `step`. Изгорени калории — `Math.round` преди
+    запис в `activity_entries`. Базата НЕ пази граници (виж §4).
 11. **Актуализирай [раздел 10](#10-дневник-на-промените)** при всяка значима промяна и обнови
     датата в header-а.
 12. Преди да разчиташ на компонент от `components/ui/` — `grep` дали изобщо се внася някъде.
@@ -549,6 +575,9 @@ Type-check: `npx tsc --noEmit` (в allow-листа на `.claude/settings.local
 | 2026-09-07 | **Fix #10 (TASK-5):** `onboarding_completed` се огледалва в JWT `user_metadata`; middleware го чете оттам (нула extra заявки), fallback към DB само за стари профили. | `middleware.ts`, `app/(app)/onboarding/page.tsx`, `app/(app)/settings/page.tsx` |
 | 2026-09-10 | **TASK-2:** `activity_entries.duration_minutes` колона (миграция + schema.sql + `ActivityEntry` тип). Записва се от AI result и при save на любимо; пренася се при «Log again»; показва се в `ActivityCard` + `ActivityDetailSheet`. Нов i18n ключ `duration`. **Миграцията трябва да се пусне ръчно в прод.** | `supabase/migrations/20260910101128_add_activity_duration.sql`, `supabase/schema.sql`, `lib/types.ts`, `lib/i18n.ts`, `app/(app)/activity/page.tsx`, `components/ActivityDetailSheet.tsx`, `components/ActivityCard.tsx` |
 | 2026-09-10 | **TASK-1 ✅:** `schema.sql` сверен с прода (колони + constraints + индекси) и пренаписан като огледало. Махнати неприложените CHECK-ове (age/weight/height, food, activity calories); добавени `favorite_*_user_name_unique` (lower(name)) + `use_count DESC` индекси + `water_entries` в основния файл. Политика записана в правило #3. | `supabase/schema.sql`, `PROJECT_CONTEXT.md` |
+| 2026-09-10 | **Bug #12:** числови полета — `parseFloat`+`Math.round` вместо `parseInt`, guard за отрицателни/нула, `min={0}`+`step` на всички number input-и. Нови ключове `noNegativeValues`, `caloriesMustBePositive`. | `app/(app)/add/page.tsx`, `app/(app)/activity/page.tsx`, `components/FoodDetailSheet.tsx`, `components/ActivityDetailSheet.tsx`, `lib/i18n.ts` |
+| 2026-09-10 | **Feature:** Edit режим в detail sheet-овете — молив бутон → полета стават input-и → `.update()` на записа + `invalidateDayData`. Нови ключове `edit`/`save`/`cancel`/`entryUpdated`/`activityUpdated`/`failedToUpdate`. | `components/FoodDetailSheet.tsx`, `components/ActivityDetailSheet.tsx`, `lib/i18n.ts` |
+| 2026-09-10 | **Feature:** Профилна снимка — `AvatarUpload` (resize 512px → Storage bucket `avatars/<uid>/avatar.jpg` → `user_profiles.avatar_url`), показва се на дашборд аватара + `ProfileSheet`. Миграция `20260910120000_add_avatar.sql` (колона + storage RLS). **Bucket-ът `avatars` се създава РЪЧНО в dashboard (Public), после миграцията.** | `supabase/migrations/20260910120000_add_avatar.sql`, `supabase/schema.sql`, `lib/types.ts`, `lib/i18n.ts`, `components/AvatarUpload.tsx`, `components/ProfileSheet.tsx`, `app/(app)/settings/page.tsx`, `app/(app)/page.tsx` |
 
 <!-- Формат на нов ред: | YYYY-MM-DD | какво се промени и защо | засегнати файлове | -->
 
