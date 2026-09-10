@@ -47,6 +47,7 @@ export interface ActivityEntry {
   date: string
   description: string
   calories_burned: number
+  duration_minutes: number | null
   ai_confidence: number | null
   notes: string | null
   created_at: string

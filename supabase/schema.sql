@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS activity_entries (
   date DATE NOT NULL,
   description TEXT NOT NULL,
   calories_burned INTEGER NOT NULL,
+  duration_minutes INTEGER,
   ai_confidence DECIMAL(3,2),
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -133,7 +134,9 @@ ALTER TABLE food_entries
 
 ALTER TABLE activity_entries
   ADD CONSTRAINT chk_activity_calories_burned
-    CHECK (calories_burned >= 0 AND calories_burned <= 10000);
+    CHECK (calories_burned >= 0 AND calories_burned <= 10000),
+  ADD CONSTRAINT chk_activity_duration_minutes
+    CHECK (duration_minutes IS NULL OR (duration_minutes >= 0 AND duration_minutes <= 1440));
 
 ALTER TABLE user_profiles
   ADD CONSTRAINT chk_profile_age

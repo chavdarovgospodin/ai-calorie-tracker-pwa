@@ -88,6 +88,7 @@ export default function ActivityDetailSheet({
           .from('favorite_activities')
           .update({
             calories_burned: entry!.calories_burned,
+            duration_minutes: entry!.duration_minutes,
             use_count: existing.use_count + 1,
           })
           .eq('id', existing.id);
@@ -97,6 +98,7 @@ export default function ActivityDetailSheet({
           user_id: userId,
           name: entry!.description,
           calories_burned: entry!.calories_burned,
+          duration_minutes: entry!.duration_minutes,
           use_count: 1,
         });
         toast.success(t.addedToFavoritesActivity);
@@ -116,6 +118,7 @@ export default function ActivityDetailSheet({
       date: targetDate,
       description: entry!.description,
       calories_burned: entry!.calories_burned,
+      duration_minutes: entry!.duration_minutes,
       notes: entry!.notes,
       ai_confidence: entry!.ai_confidence,
     });
@@ -171,6 +174,14 @@ export default function ActivityDetailSheet({
 
         {/* Info */}
         <div className="bg-[#0A0A0F] rounded-xl px-3 py-1 mb-4 divide-y divide-[#1E1E2E]">
+          {entry.duration_minutes != null && entry.duration_minutes > 0 && (
+            <div className="flex justify-between py-2.5">
+              <span className="text-sm text-[#64748B]">{t.duration}</span>
+              <span className="text-sm text-[#F8FAFC]">
+                {entry.duration_minutes} {t.min}
+              </span>
+            </div>
+          )}
           <div className="flex justify-between py-2.5">
             <span className="text-sm text-[#64748B]">{t.addedAt}</span>
             <span className="text-sm text-[#F8FAFC]">

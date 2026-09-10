@@ -44,6 +44,9 @@ export default function ActivityCard({ entry, onDelete, onPress }: ActivityCardP
         <div className="flex items-center gap-1 mt-1.5">
           <Flame size={12} className="text-amber-400" />
           <span className="text-xs text-amber-400 font-medium">{entry.calories_burned} {t.kcalBurned}</span>
+          {entry.duration_minutes != null && entry.duration_minutes > 0 && (
+            <span className="text-xs text-[#64748B] font-medium">· {entry.duration_minutes} {t.min}</span>
+          )}
         </div>
       </div>
 

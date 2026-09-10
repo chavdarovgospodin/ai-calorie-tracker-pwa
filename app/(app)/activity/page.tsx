@@ -185,10 +185,11 @@ function AddActivity() {
         .ilike('name', result.activityName)
         .maybeSingle()
 
+      const favDuration = result.durationMinutes > 0 ? Math.round(result.durationMinutes) : null
       if (existing) {
         const { error } = await supabase
           .from('favorite_activities')
-          .update({ calories_burned: Math.round(result.caloriesBurned), use_count: existing.use_count + 1 })
+          .update({ calories_burned: Math.round(result.caloriesBurned), duration_minutes: favDuration, use_count: existing.use_count + 1 })
           .eq('id', existing.id)
         if (!error) {
           setIsFavorite(true)
@@ -198,7 +199,7 @@ function AddActivity() {
       } else {
         const { error } = await supabase
           .from('favorite_activities')
-          .insert({ user_id: user.id, name: result.activityName, calories_burned: Math.round(result.caloriesBurned), use_count: 1 })
+          .insert({ user_id: user.id, name: result.activityName, calories_burned: Math.round(result.caloriesBurned), duration_minutes: favDuration, use_count: 1 })
         if (error) {
           toast.error(t.failedToSaveFavorite)
         } else {
@@ -243,6 +244,7 @@ function AddActivity() {
       date,
       description: fav.name,
       calories_burned: Math.round(fav.calories_burned),
+      duration_minutes: fav.duration_minutes ?? null,
       notes: null,
       ai_confidence: null,
     })
@@ -333,6 +335,7 @@ function AddActivity() {
       date,
       description: result.activityName,
       calories_burned: Math.round(result.caloriesBurned),
+      duration_minutes: result.durationMinutes > 0 ? Math.round(result.durationMinutes) : null,
       notes: notes || null,
       ai_confidence: result.confidence,
     })

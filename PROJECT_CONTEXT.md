@@ -241,6 +241,7 @@ next.config.ts               withPWA wrapper + images.remotePatterns https://** 
 | `date` | DATE NOT NULL | |
 | `description` | TEXT NOT NULL | (не `name`!) |
 | `calories_burned` | INTEGER NOT NULL | CHECK 0–10000 |
+| `duration_minutes` | INTEGER NULL | CHECK 0–1440; от AI `durationMinutes`, NULL за ръчни записи. Миграция `20260910101128_add_activity_duration.sql` |
 | `ai_confidence` | DECIMAL(3,2) NULL | |
 | `notes` | TEXT NULL | |
 | `created_at`,`updated_at` | TIMESTAMPTZ | триггер |
@@ -261,16 +262,22 @@ next.config.ts               withPWA wrapper + images.remotePatterns https://** 
 #### `favorite_foods`
 `id`, `user_id` (FK, NOT NULL), `name` TEXT NOT NULL, `calories` INTEGER NOT NULL,
 `protein`/`carbs`/`fat`/`fiber` DECIMAL(6,2) NULL, `use_count` INTEGER NOT NULL DEFAULT 1,
-`created_at`. Индекс `idx_favorite_foods_user (user_id)`. **Няма UNIQUE constraint** —
-дедупликацията е приложна (`.ilike('name', ...)` преди insert).
+`created_at`.
+⚠️ **Прод базата има `UNIQUE (user_id, lower(name))`** (`favorite_foods_user_name_unique`) —
+`schema.sql` НЕ го отразява (там няма UNIQUE изобщо). Дедупликацията в кода е `.ilike('name', ...)`
+преди insert; DB-то я налага независимо. Прод индекси: `favorite_foods_user_name_unique`,
+`idx_favorite_foods_user_count (user_id, use_count DESC)` — `schema.sql` има само
+`idx_favorite_foods_user (user_id)`. Виж TASK-1.
 
 #### `favorite_activities`
 `id`, `user_id` (FK, NOT NULL), `name` TEXT NOT NULL, `calories_burned` INTEGER NOT NULL,
 `duration_minutes` INTEGER NULL, `use_count` INTEGER NOT NULL DEFAULT 1, `created_at`.
-**`UNIQUE (user_id, name)`** — `favorite_activities_user_id_name_key` (в schema.sql + отделна миграция).
-`lib/types.ts::FavoriteActivity` вече include-ва `duration_minutes: number | null` (от 2026-09-07).
-⚠️ Стойността обаче никъде не се записва при insert и не се персистира в `activity_entries`
-(там няма такава колона).
+Прод базата има **два** UNIQUE-а: `favorite_activities_user_id_name_key (user_id, name)` (и в
+schema.sql) И `favorite_activities_user_name_unique (user_id, lower(name))` (НЕ е в schema.sql).
+Прод индекс `idx_favorite_activities_user_count (user_id, use_count DESC)` vs schema.sql
+`idx_favorite_activities_user (user_id)`. Виж TASK-1.
+`lib/types.ts::FavoriteActivity` include-ва `duration_minutes: number | null`; **записва се**
+при save на любимо (от 2026-09-10) и се пренася в `activity_entries` при «Log again».
 
 #### Триггери
 `update_updated_at()` PL/pgSQL функция + `BEFORE UPDATE` триггери на `user_profiles`,
@@ -388,8 +395,8 @@ disabled» секции.** Единствените `eslint-disable` са лок
 - **Няма offline режим** отвъд това, което next-pwa кешира по подразбиране; заявките към Supabase
   изискват мрежа.
 - **Няма reset парола** flow.
-- **`duration_minutes`** на favorite activities и `durationMinutes` от AI отговора **не се
-  персистират** в `activity_entries` (няма такава колона там).
+- **Ръчно добавена активност няма поле за продължителност** — `handleManualActivitySave` пише
+  `duration_minutes` = NULL (само AI и favorites носят стойност).
 
 ---
 
@@ -406,9 +413,11 @@ disabled» секции.** Единствените `eslint-disable` са лок
    > `age`/`weight`/`height` от `schema.sql:136-142`. `schema.sql` е разминат с реалността на
    > няколко места — не разчитай сляпо на него, сверявай с реалната база.
 
-2. ✅ **ПОПРАВЕНО 2026-09-07 — `FavoriteActivity` тип.**
-   Добавено `duration_minutes: number | null` в `lib/types.ts`. Стойността все още не се записва
-   при insert и няма колона за нея в `activity_entries` — това е отделна задача (виж раздел 6 🔴).
+2. ✅ **ПОПРАВЕНО 2026-09-07 / 2026-09-10 — `duration_minutes` (TASK-2).**
+   2026-09-07: `duration_minutes` добавено в `FavoriteActivity` тип.
+   2026-09-10: миграция `20260910101128_add_activity_duration.sql` (колона + CHECK 0–1440 в
+   `activity_entries`), `ActivityEntry` тип, записва се от AI result/ favorite save, пренася се
+   при «Log again», показва се в `ActivityCard` + `ActivityDetailSheet`. Ръчните записи → NULL.
 
 3. ✅ **ПОПРАВЕНО 2026-09-07 — query invalidation.**
    Всяко food/activity/water mutation вече минава през `invalidateDayData()`
@@ -533,6 +542,8 @@ Type-check: `npx tsc --noEmit` (в allow-листа на `.claude/settings.local
 | 2026-09-07 | **Fix #6 (частично, TASK-3):** локализирани `OnboardingSteps`, `ProfileSheet` меню, `settings` (Profile heading + water goal валидации). Нови i18n ключове: `back`, `profile`, `measurementsHint`, `goalHint`, `deficitPerDay`, `maintainDesc`, `surplusPerDay`, `activityWeeklyHint`, `manualLogHint`, `invalidWaterGoal`. Остават login/register/404. | `lib/i18n.ts`, `components/OnboardingSteps.tsx`, `components/ProfileSheet.tsx`, `app/(app)/settings/page.tsx` |
 | 2026-09-07 | **Fix #3 (TASK-4):** нов `lib/query-keys.ts::invalidateDayData()` — всяко food/activity/water mutation вече invalidatва деня + `history` + `earliest_date`/`earliest_month`. Поправя стари History агрегати и заключена date-навигация след добавяне на запис за по-ранна дата. | `lib/query-keys.ts`, `app/(app)/page.tsx`, `app/(app)/add/page.tsx`, `app/(app)/activity/page.tsx`, `components/FoodDetailSheet.tsx`, `components/ActivityDetailSheet.tsx`, `components/WaterSection.tsx` |
 | 2026-09-07 | **Fix #10 (TASK-5):** `onboarding_completed` се огледалва в JWT `user_metadata`; middleware го чете оттам (нула extra заявки), fallback към DB само за стари профили. | `middleware.ts`, `app/(app)/onboarding/page.tsx`, `app/(app)/settings/page.tsx` |
+| 2026-09-10 | **TASK-2:** `activity_entries.duration_minutes` колона (миграция + schema.sql + `ActivityEntry` тип). Записва се от AI result и при save на любимо; пренася се при «Log again»; показва се в `ActivityCard` + `ActivityDetailSheet`. Нов i18n ключ `duration`. **Миграцията трябва да се пусне ръчно в прод.** | `supabase/migrations/20260910101128_add_activity_duration.sql`, `supabase/schema.sql`, `lib/types.ts`, `lib/i18n.ts`, `app/(app)/activity/page.tsx`, `components/ActivityDetailSheet.tsx`, `components/ActivityCard.tsx` |
+| 2026-09-10 | **TASK-1 (частично):** от прод индекси установени още разминавания със `schema.sql` — `favorite_foods`/`favorite_activities` имат `UNIQUE (user_id, lower(name))` и `(user_id, use_count DESC)` индекси, които `schema.sql` няма. Записано в раздел 4 и TASK-1. Чака колони/constraints дъмп за пълна ревизия. | `PROJECT_CONTEXT.md` |
 
 <!-- Формат на нов ред: | YYYY-MM-DD | какво се промени и защо | засегнати файлове | -->
 
@@ -545,34 +556,41 @@ Type-check: `npx tsc --noEmit` (в allow-листа на `.claude/settings.local
 ### TASK-1 · `supabase/schema.sql` е разминат с реалната прод база
 **Приоритет:** среден · **Тип:** tech-debt / точност на документацията
 
-`schema.sql` описва обекти, които реалната прод база **няма**:
-- CHECK constraint-ите за `user_profiles.age` (10–120), `weight` (20–300), `height` (100–250)
-  от `schema.sql:137-143` — липсват в прод (потвърдено от `CREATE TABLE` дъмп на 2026-09-07).
-- Възможно е и други разминавания (CHECK-овете за food/activity калории/макроси, триггерите) —
-  не е сверявано обект по обект.
+**Установени разминавания (частичен списък, `schema.sql` спрямо прода):**
+- **Липсват в прод:** CHECK-ове за `user_profiles.age` (10–120), `weight` (20–300),
+  `height` (100–250) от `schema.sql` (потвърдено от `CREATE TABLE` дъмп 2026-09-07).
+- **Липсват в `schema.sql`** (но ги има в прод, потвърдено от индекс дъмп 2026-09-10):
+  - `favorite_foods_user_name_unique` — `UNIQUE (user_id, lower(name))` (в `schema.sql` няма
+    UNIQUE на `favorite_foods` изобщо)
+  - `favorite_activities_user_name_unique` — `UNIQUE (user_id, lower(name))` (в `schema.sql`
+    има само `favorite_activities_user_id_name_key` на `(user_id, name)` — прод-ът има и двете)
+  - `idx_favorite_foods_user_count` / `idx_favorite_activities_user_count` —
+    `(user_id, use_count DESC)` (в `schema.sql` са само на `user_id`)
+- **Още не е сверявано:** колони/типове/defaults, CHECK-ове за food/activity, триггери.
 
 **Защо е проблем:** агент/разработчик, който чете `schema.sql`, приема че тези защити ги има на
 DB ниво и може да пропусне клиентска валидация; или пише миграция, която конфликтва.
 
+**Какво остава да се извади от прода (заявки в §4 / по-долу):**
+- `information_schema.columns` за `public` — колони, типове, nullable, defaults
+- `information_schema.table_constraints` + `check_constraints` — CHECK/FK/UNIQUE/PK
+- `information_schema.triggers` за `public`
+- (индексите вече са налични — 2026-09-10)
+
 **Как да се затвори:**
-1. Извади реалната схема: `pg_dump --schema-only --no-owner --no-privileges` (или Supabase
-   dashboard → Database → Schema visualizer / SQL `pg_dump`).
-2. Сравни обект по обект с `supabase/schema.sql`.
-3. Или (а) допиши липсващите constraint-и с idempotent миграция и остави `schema.sql` като
-   истина, или (б) пренапиши `schema.sql` да отразява точно прода и маркирай кои constraint-и
-   са само «желани, не приложени».
-4. Реши политиката: `schema.sql` = канонична цел, или = огледало на прода. Запиши я в раздел 9.
+1. Сравни горните дъмпове обект по обект с `supabase/schema.sql`.
+2. Или (а) допиши липсващите обекти с idempotent миграция и остави `schema.sql` като истина,
+   или (б) пренапиши `schema.sql` да отразява точно прода.
+3. Реши политиката: `schema.sql` = канонична цел, или = огледало на прода. Запиши я в раздел 9.
 
 **Внимание:** добавянето на CHECK на съществуваща таблица гърми, ако има редове извън диапазона —
-първо `SELECT` за нарушители, чак после `ADD CONSTRAINT`.
+първо `SELECT` за нарушители, чак после `ADD CONSTRAINT`. Аналогично за UNIQUE — първо провери
+за дубли по `lower(name)`.
 
-### TASK-2 · `duration_minutes` от AI не се персистира
-**Приоритет:** нисък · **Тип:** липсваща функционалност
-
-`activity_entries` няма `duration_minutes` колона. AI връща `durationMinutes`, показва се в UI,
-но не се записва. `favorite_activities.duration_minutes` съществува, но също не се попълва при insert.
-За да работи: миграция + добавяне на полето в `activity_entries` insert-ите (`activity/page.tsx`,
-`ActivityDetailSheet.tsx`) + `ActivityEntry` тип.
+### TASK-2 · ✅ ПОПРАВЕНО 2026-09-10 — `duration_minutes` персистиране
+Миграция `20260910101128_add_activity_duration.sql` + `ActivityEntry` тип + запис от AI/favorite
++ пренасяне при «Log again» + показване в `ActivityCard`/`ActivityDetailSheet`. Ръчните записи →
+NULL (няма поле за въвеждане — може да се добави при нужда). Виж [раздел 7 #2](#7-известни-несъответствия-и-бъгове).
 
 ### TASK-3 · i18n: остатъчни хардкоднати стрингове (login/register/404)
 **Приоритет:** нисък-среден · **Тип:** i18n · виж [раздел 7 #6](#7-известни-несъответствия-и-бъгове)
