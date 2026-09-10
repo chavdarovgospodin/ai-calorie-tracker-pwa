@@ -37,6 +37,16 @@ function Dashboard() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [selectedFood, setSelectedFood] = useState<FoodEntry | null>(null)
   const [selectedActivity, setSelectedActivity] = useState<ActivityEntry | null>(null)
+  const [openInEdit, setOpenInEdit] = useState(false)
+
+  function openFood(entry: FoodEntry, edit = false) {
+    setOpenInEdit(edit)
+    setSelectedFood(entry)
+  }
+  function openActivity(entry: ActivityEntry, edit = false) {
+    setOpenInEdit(edit)
+    setSelectedActivity(entry)
+  }
 
   useEffect(() => {
     const param = searchParams.get('date')
@@ -261,7 +271,8 @@ function Dashboard() {
                 key={entry.id}
                 entry={entry}
                 onDelete={handleDeleteFood}
-                onPress={setSelectedFood}
+                onPress={(e) => openFood(e)}
+                onEdit={(e) => openFood(e, true)}
               />
             ))}
           </div>
@@ -300,7 +311,8 @@ function Dashboard() {
                 key={entry.id}
                 entry={entry}
                 onDelete={handleDeleteActivity}
-                onPress={setSelectedActivity}
+                onPress={(e) => openActivity(e)}
+                onEdit={(e) => openActivity(e, true)}
               />
             ))}
           </div>
@@ -315,8 +327,8 @@ function Dashboard() {
       avatarLetter={avatarLetter}
       avatarUrl={avatarUrl}
     />
-    {user && <FoodDetailSheet entry={selectedFood} date={date} today={today} userId={user.id} onClose={() => setSelectedFood(null)} />}
-    {user && <ActivityDetailSheet entry={selectedActivity} date={date} today={today} userId={user.id} onClose={() => setSelectedActivity(null)} />}
+    {user && <FoodDetailSheet entry={selectedFood} date={date} today={today} userId={user.id} initialEditing={openInEdit} onClose={() => setSelectedFood(null)} />}
+    {user && <ActivityDetailSheet entry={selectedActivity} date={date} today={today} userId={user.id} initialEditing={openInEdit} onClose={() => setSelectedActivity(null)} />}
     </>
   )
 }

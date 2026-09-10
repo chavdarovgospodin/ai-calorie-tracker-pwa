@@ -14,6 +14,7 @@ interface ActivityDetailSheetProps {
   date: string;
   today: string;
   userId: string;
+  initialEditing?: boolean;
   onClose: () => void;
 }
 
@@ -22,6 +23,7 @@ export default function ActivityDetailSheet({
   date,
   today,
   userId,
+  initialEditing = false,
   onClose,
 }: ActivityDetailSheetProps) {
   const { t } = useLocale();
@@ -38,8 +40,19 @@ export default function ActivityDetailSheet({
   const [fDuration, setFDuration] = useState('');
   const [fNotes, setFNotes] = useState('');
 
+  function fillEditFields(e: ActivityEntry) {
+    setFDescription(e.description);
+    setFCalories(String(e.calories_burned));
+    setFDuration(e.duration_minutes != null ? String(e.duration_minutes) : '');
+    setFNotes(e.notes ?? '');
+  }
+
   useEffect(() => {
     if (!entry) return;
+    if (initialEditing) {
+      fillEditFields(entry);
+      setEditing(true);
+    }
     supabase
       .from('favorite_activities')
       .select('id')
@@ -56,10 +69,7 @@ export default function ActivityDetailSheet({
 
   function startEditing() {
     if (!entry) return;
-    setFDescription(entry.description);
-    setFCalories(String(entry.calories_burned));
-    setFDuration(entry.duration_minutes != null ? String(entry.duration_minutes) : '');
-    setFNotes(entry.notes ?? '');
+    fillEditFields(entry);
     setShowLogOptions(false);
     setEditing(true);
   }

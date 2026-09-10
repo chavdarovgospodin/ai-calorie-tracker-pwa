@@ -14,6 +14,7 @@ interface FoodDetailSheetProps {
   date: string;
   today: string;
   userId: string;
+  initialEditing?: boolean;
   onClose: () => void;
 }
 
@@ -43,6 +44,7 @@ export default function FoodDetailSheet({
   date,
   today,
   userId,
+  initialEditing = false,
   onClose,
 }: FoodDetailSheetProps) {
   const { t } = useLocale();
@@ -64,8 +66,23 @@ export default function FoodDetailSheet({
   const [fQuantity, setFQuantity] = useState('');
   const [fNotes, setFNotes] = useState('');
 
+  function fillEditFields(e: FoodEntry) {
+    setFName(e.name);
+    setFCalories(String(e.calories));
+    setFProtein(e.protein != null ? String(e.protein) : '');
+    setFCarbs(e.carbs != null ? String(e.carbs) : '');
+    setFFat(e.fat != null ? String(e.fat) : '');
+    setFFiber(e.fiber != null ? String(e.fiber) : '');
+    setFQuantity(e.quantity ?? '');
+    setFNotes(e.notes ?? '');
+  }
+
   useEffect(() => {
     if (!entry) return;
+    if (initialEditing) {
+      fillEditFields(entry);
+      setEditing(true);
+    }
     supabase
       .from('favorite_foods')
       .select('id')
@@ -82,14 +99,7 @@ export default function FoodDetailSheet({
 
   function startEditing() {
     if (!entry) return;
-    setFName(entry.name);
-    setFCalories(String(entry.calories));
-    setFProtein(entry.protein != null ? String(entry.protein) : '');
-    setFCarbs(entry.carbs != null ? String(entry.carbs) : '');
-    setFFat(entry.fat != null ? String(entry.fat) : '');
-    setFFiber(entry.fiber != null ? String(entry.fiber) : '');
-    setFQuantity(entry.quantity ?? '');
-    setFNotes(entry.notes ?? '');
+    fillEditFields(entry);
     setShowLogOptions(false);
     setEditing(true);
   }

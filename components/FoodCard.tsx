@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Pencil } from 'lucide-react'
 import type { FoodEntry } from '@/lib/types'
 import { useLocale } from '@/lib/locale-context'
 
@@ -9,9 +9,10 @@ interface FoodCardProps {
   entry: FoodEntry
   onDelete: (id: string) => void
   onPress: (entry: FoodEntry) => void
+  onEdit: (entry: FoodEntry) => void
 }
 
-export default function FoodCard({ entry, onDelete, onPress }: FoodCardProps) {
+export default function FoodCard({ entry, onDelete, onPress, onEdit }: FoodCardProps) {
   const { t } = useLocale()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const confirmRef = useRef(false)
@@ -63,8 +64,17 @@ export default function FoodCard({ entry, onDelete, onPress }: FoodCardProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
-        <span className="text-xl font-bold tabular-nums text-[#F8FAFC]">{entry.calories}</span>
+      <div className="flex items-center gap-1 shrink-0">
+        <span className="text-xl font-bold tabular-nums text-[#F8FAFC] mr-1">{entry.calories}</span>
+        {!confirmDelete && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(entry) }}
+            title={t.edit}
+            className="flex-shrink-0 rounded-xl px-2 py-1.5 text-[#64748B] hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors"
+          >
+            <Pencil size={14} />
+          </button>
+        )}
         <button
           onClick={handleDelete}
           title={confirmDelete ? 'Click again to confirm delete' : undefined}

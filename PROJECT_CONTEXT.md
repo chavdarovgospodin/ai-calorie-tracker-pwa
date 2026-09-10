@@ -126,8 +126,8 @@ components/
   BottomNav.tsx              Долна навигация (Home/History/+/Settings) + action sheet за "+" (Food|Activity)
   CalorieRing.tsx            SVG пръстен: consumed / (target = base + burned); червено при over
   MacroBar.tsx               Прогрес бар за протеин/въглехидрати/мазнини
-  FoodCard.tsx               Ред за храна в списъка; двойно-тап за delete; тап отваря detail sheet
-  ActivityCard.tsx           Ред за активност; същия delete pattern
+  FoodCard.tsx               Ред за храна: тап отваря detail sheet; ✎ молив бутон → sheet директно в edit; двойно-тап trash за delete
+  ActivityCard.tsx           Ред за активност; същите ✎ / delete бутони
   FoodDetailSheet.tsx        Модал за храна: view + ✎ Edit режим (.update), "Log again", toggle favorite
   ActivityDetailSheet.tsx    Модал за активност: същото (view + Edit + Log again + favorite)
   WaterSection.tsx           Вода: quick-add [200/250/350/500], прогрес, collapsible списък със записи
@@ -380,8 +380,9 @@ disabled» секции.** Единствените `eslint-disable` са лок
 - **Gemini интеграция** — двата route-а, single-call validate+analyze, zod парсване, graceful
   fallback при невалиден JSON, 25s timeout.
 - **Detail sheets** (Food/Activity): «Log again» за текущия ден; за минал ден — избор
-  «за този ден» / «за днес»; toggle любимо; **✎ Edit режим** (2026-09-10) — молив бутон →
-  полетата стават input-и → `.update()` на записа + `invalidateDayData`.
+  «за този ден» / «за днес»; toggle любимо; **✎ Edit режим** (2026-09-10) — от молив бутон в
+  картата (`onEdit` → `initialEditing` prop) или молив в модала → полетата стават input-и →
+  `.update()` на записа + `invalidateDayData`.
 - **Profile снимка** (2026-09-10): `AvatarUpload` в `settings` (Account карта) — client resize
   до 512px, upload в Supabase Storage bucket `avatars` под `<uid>/avatar.jpg`, public URL в
   `user_profiles.avatar_url`. Показва се на дашборд аватара и в `ProfileSheet`.
@@ -577,6 +578,7 @@ Type-check: `npx tsc --noEmit` (в allow-листа на `.claude/settings.local
 | 2026-09-10 | **TASK-1 ✅:** `schema.sql` сверен с прода (колони + constraints + индекси) и пренаписан като огледало. Махнати неприложените CHECK-ове (age/weight/height, food, activity calories); добавени `favorite_*_user_name_unique` (lower(name)) + `use_count DESC` индекси + `water_entries` в основния файл. Политика записана в правило #3. | `supabase/schema.sql`, `PROJECT_CONTEXT.md` |
 | 2026-09-10 | **Bug #12:** числови полета — `parseFloat`+`Math.round` вместо `parseInt`, guard за отрицателни/нула, `min={0}`+`step` на всички number input-и. Нови ключове `noNegativeValues`, `caloriesMustBePositive`. | `app/(app)/add/page.tsx`, `app/(app)/activity/page.tsx`, `components/FoodDetailSheet.tsx`, `components/ActivityDetailSheet.tsx`, `lib/i18n.ts` |
 | 2026-09-10 | **Feature:** Edit режим в detail sheet-овете — молив бутон → полета стават input-и → `.update()` на записа + `invalidateDayData`. Нови ключове `edit`/`save`/`cancel`/`entryUpdated`/`activityUpdated`/`failedToUpdate`. | `components/FoodDetailSheet.tsx`, `components/ActivityDetailSheet.tsx`, `lib/i18n.ts` |
+| 2026-09-10 | **Feature:** ✎ молив бутон в `FoodCard`/`ActivityCard` (до trash) отваря sheet-а директно в edit (`onEdit` prop → `initialEditing`). | `components/FoodCard.tsx`, `components/ActivityCard.tsx`, `components/FoodDetailSheet.tsx`, `components/ActivityDetailSheet.tsx`, `app/(app)/page.tsx` |
 | 2026-09-10 | **Feature:** Профилна снимка — `AvatarUpload` (resize 512px → Storage bucket `avatars/<uid>/avatar.jpg` → `user_profiles.avatar_url`), показва се на дашборд аватара + `ProfileSheet`. Миграция `20260910120000_add_avatar.sql` (колона + storage RLS). **Bucket-ът `avatars` се създава РЪЧНО в dashboard (Public), после миграцията.** | `supabase/migrations/20260910120000_add_avatar.sql`, `supabase/schema.sql`, `lib/types.ts`, `lib/i18n.ts`, `components/AvatarUpload.tsx`, `components/ProfileSheet.tsx`, `app/(app)/settings/page.tsx`, `app/(app)/page.tsx` |
 
 <!-- Формат на нов ред: | YYYY-MM-DD | какво се промени и защо | засегнати файлове | -->

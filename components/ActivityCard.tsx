@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Trash2, Flame } from 'lucide-react'
+import { Trash2, Flame, Pencil } from 'lucide-react'
 import type { ActivityEntry } from '@/lib/types'
 import { useLocale } from '@/lib/locale-context'
 
@@ -9,9 +9,10 @@ interface ActivityCardProps {
   entry: ActivityEntry
   onDelete: (id: string) => void
   onPress: (entry: ActivityEntry) => void
+  onEdit: (entry: ActivityEntry) => void
 }
 
-export default function ActivityCard({ entry, onDelete, onPress }: ActivityCardProps) {
+export default function ActivityCard({ entry, onDelete, onPress, onEdit }: ActivityCardProps) {
   const { t } = useLocale()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const confirmRef = useRef(false)
@@ -50,8 +51,17 @@ export default function ActivityCard({ entry, onDelete, onPress }: ActivityCardP
         </div>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
-        <span className="text-xl font-bold tabular-nums text-amber-400">{entry.calories_burned}</span>
+      <div className="flex items-center gap-1 shrink-0">
+        <span className="text-xl font-bold tabular-nums text-amber-400 mr-1">{entry.calories_burned}</span>
+        {!confirmDelete && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(entry) }}
+            title={t.edit}
+            className="flex-shrink-0 rounded-xl px-2 py-1.5 text-[#64748B] hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors"
+          >
+            <Pencil size={14} />
+          </button>
+        )}
         <button
           onClick={handleDelete}
           title={confirmDelete ? 'Click again to confirm delete' : undefined}
