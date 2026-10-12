@@ -1,4 +1,4 @@
-export type Locale = 'en' | 'bg'
+export type Locale = 'en' | 'bg';
 
 export const translations = {
   en: {
@@ -82,7 +82,8 @@ export const translations = {
     text: 'Text',
     photo: 'Photo',
     describeYourMeal: 'Describe your meal',
-    mealPlaceholder: 'e.g. 2 scrambled eggs with toast and a cup of orange juice',
+    mealPlaceholder:
+      'e.g. 2 scrambled eggs with toast and a cup of orange juice',
     tapToSelectPhoto: 'Tap to take or select a photo',
     change: 'Change',
     additionalDescription: 'Additional description (optional)',
@@ -144,7 +145,8 @@ export const translations = {
     // Activity
     logActivity: 'Log Activity',
     describeWorkout: 'Describe your workout',
-    workoutPlaceholder: 'e.g. 30 minutes of running at moderate pace, then 20 minutes of weight training',
+    workoutPlaceholder:
+      'e.g. 30 minutes of running at moderate pace, then 20 minutes of weight training',
     howDidItFeel: 'How did it feel?',
     checkingActivity: 'Checking your activity...',
     makingSureWeCanCalculate: 'Making sure we can calculate this',
@@ -156,7 +158,8 @@ export const translations = {
     activityLogged: 'Activity logged!',
     pleaseDescribeWorkout: 'Please describe your workout',
     quickLog: 'Quick Log',
-    notAnActivity: "This doesn't look like a physical activity. Please describe a workout, sport, or exercise.",
+    notAnActivity:
+      "This doesn't look like a physical activity. Please describe a workout, sport, or exercise.",
     tooVague: 'Please be more specific about your activity.',
     addedToFavoritesActivity: 'Added to favorites ⭐',
     failedToLogActivity: 'Failed to log activity',
@@ -164,6 +167,9 @@ export const translations = {
     // History
     history: 'History',
     avgCalories: 'Avg. Calories',
+    avgProtein: 'Avg. Protein',
+    avgFat: 'Avg. Fat',
+    avgCarbs: 'Avg. Carbs',
     avgDiff: 'Total +/–',
     day: 'day',
     target: 'target',
@@ -387,7 +393,8 @@ export const translations = {
     // Activity
     logActivity: 'Добави активност',
     describeWorkout: 'Опиши тренировката си',
-    workoutPlaceholder: 'напр. 30 минути бягане с умерено темпо, после 20 минути с тежести',
+    workoutPlaceholder:
+      'напр. 30 минути бягане с умерено темпо, после 20 минути с тежести',
     howDidItFeel: 'Как се почувства?',
     checkingActivity: 'Проверява активността...',
     makingSureWeCanCalculate: 'Проверяваме дали можем да изчислим',
@@ -399,7 +406,8 @@ export const translations = {
     activityLogged: 'Активността е добавена!',
     pleaseDescribeWorkout: 'Моля опиши тренировката си',
     quickLog: 'Бързо добавяне',
-    notAnActivity: 'Това не изглежда като физическа активност. Опиши тренировка, спорт или упражнение.',
+    notAnActivity:
+      'Това не изглежда като физическа активност. Опиши тренировка, спорт или упражнение.',
     tooVague: 'Моля бъди по-конкретен за активността.',
     addedToFavoritesActivity: 'Добавено в любими ⭐',
     failedToLogActivity: 'Грешка при добавяне',
@@ -407,6 +415,9 @@ export const translations = {
     // History
     history: 'История',
     avgCalories: 'Средно калории',
+    avgProtein: 'Средно протеин',
+    avgFat: 'Средно мазнини',
+    avgCarbs: 'Средно въхлехидрати',
     avgDiff: 'Общо +/–',
     day: 'ден',
     target: 'цел',
@@ -486,6 +497,6 @@ export const translations = {
     // Locale for dates
     dateLocale: 'bg-BG',
   },
-} as const
+} as const;
 
-export type TranslationKey = keyof typeof translations.en
+export type TranslationKey = keyof typeof translations.en;

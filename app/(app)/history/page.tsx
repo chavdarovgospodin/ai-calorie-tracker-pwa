@@ -1,52 +1,72 @@
-'use client'
+'use client';
 
-import { useState, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, TrendingUp, Calendar } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
-import type { UserProfile } from '@/lib/types'
-import { useLocale } from '@/lib/locale-context'
+import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  ChevronLeft,
+  ChevronRight,
+  TrendingUp,
+  Calendar,
+  Beef,
+  Droplets,
+  Wheat,
+} from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { createClient } from '@/lib/supabase/client';
+import type { UserProfile } from '@/lib/types';
+import { useLocale } from '@/lib/locale-context';
 
 interface DayData {
-  date: string
-  calories: number
-  burned: number
-  water: number
+  date: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  burned: number;
+  water: number;
 }
 
 function getMonthRange(year: number, month: number) {
-  const start = `${year}-${String(month).padStart(2, '0')}-01`
-  const lastDay = new Date(year, month, 0).getDate()
-  const end = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
-  return { start, end }
+  const start = `${year}-${String(month).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const end = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  return { start, end };
 }
 
 function formatMonthLabel(year: number, month: number, dateLocale: string) {
-  return new Date(year, month - 1, 1).toLocaleDateString(dateLocale, { month: 'long', year: 'numeric' })
+  return new Date(year, month - 1, 1).toLocaleDateString(dateLocale, {
+    month: 'long',
+    year: 'numeric',
+  });
 }
 
 function formatDayLabel(dateStr: string, dateLocale: string) {
-  const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString(dateLocale, { weekday: 'short', month: 'short', day: 'numeric' })
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString(dateLocale, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 export default function HistoryPage() {
-  const { t } = useLocale()
-  const router = useRouter()
-  const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth() + 1)
+  const { t } = useLocale();
+  const router = useRouter();
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
 
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useMemo(() => createClient(), []);
 
   const { data: user } = useQuery({
     queryKey: ['user'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      return user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      return user;
     },
-  })
+  });
 
   const { data: profile } = useQuery<UserProfile | null>({
     queryKey: ['profile', user?.id],
@@ -55,81 +75,208 @@ export default function HistoryPage() {
         .from('user_profiles')
         .select('*')
         .eq('user_id', user!.id)
-        .single()
-      return data
+        .single();
+      return data;
     },
     enabled: !!user,
-  })
+  });
 
-  const { data: earliestMonth } = useQuery<{ year: number; month: number } | null>({
+  const { data: earliestMonth } = useQuery<{
+    year: number;
+    month: number;
+  } | null>({
     queryKey: ['earliest_month', user?.id],
     queryFn: async () => {
       const [foodRes, activityRes, waterRes] = await Promise.all([
-        supabase.from('food_entries').select('date').eq('user_id', user!.id).order('date', { ascending: true }).limit(1).maybeSingle(),
-        supabase.from('activity_entries').select('date').eq('user_id', user!.id).order('date', { ascending: true }).limit(1).maybeSingle(),
-        supabase.from('water_entries').select('date').eq('user_id', user!.id).order('date', { ascending: true }).limit(1).maybeSingle(),
-      ])
-      const dates = [foodRes.data?.date, activityRes.data?.date, waterRes.data?.date].filter(Boolean) as string[]
-      if (dates.length === 0) return null
-      const earliest = dates.sort()[0]
-      const d = new Date(earliest + 'T00:00:00')
-      return { year: d.getFullYear(), month: d.getMonth() + 1 }
+        supabase
+          .from('food_entries')
+          .select('date')
+          .eq('user_id', user!.id)
+          .order('date', { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('activity_entries')
+          .select('date')
+          .eq('user_id', user!.id)
+          .order('date', { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('water_entries')
+          .select('date')
+          .eq('user_id', user!.id)
+          .order('date', { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+      const dates = [
+        foodRes.data?.date,
+        activityRes.data?.date,
+        waterRes.data?.date,
+      ].filter(Boolean) as string[];
+      if (dates.length === 0) return null;
+      const earliest = dates.sort()[0];
+      const d = new Date(earliest + 'T00:00:00');
+      return { year: d.getFullYear(), month: d.getMonth() + 1 };
     },
     enabled: !!user,
-  })
+  });
 
   const { data: days = [], isLoading } = useQuery<DayData[]>({
     queryKey: ['history', year, month, user?.id],
     queryFn: async () => {
-      const { start, end } = getMonthRange(year, month)
+      const { start, end } = getMonthRange(year, month);
       const [foodRes, activityRes, waterRes] = await Promise.all([
-        supabase.from('food_entries').select('date, calories')
-          .eq('user_id', user!.id).gte('date', start).lte('date', end),
-        supabase.from('activity_entries').select('date, calories_burned')
-          .eq('user_id', user!.id).gte('date', start).lte('date', end),
-        supabase.from('water_entries').select('date, amount_ml')
-          .eq('user_id', user!.id).gte('date', start).lte('date', end),
-      ])
-      const dayMap: Record<string, DayData> = {}
+        supabase
+          .from('food_entries')
+          .select('*')
+          .eq('user_id', user!.id)
+          .gte('date', start)
+          .lte('date', end),
+        supabase
+          .from('activity_entries')
+          .select('date, calories_burned')
+          .eq('user_id', user!.id)
+          .gte('date', start)
+          .lte('date', end),
+        supabase
+          .from('water_entries')
+          .select('date, amount_ml')
+          .eq('user_id', user!.id)
+          .gte('date', start)
+          .lte('date', end),
+      ]);
+      const dayMap: Record<string, DayData> = {};
       for (const entry of foodRes.data ?? []) {
-        if (!dayMap[entry.date]) dayMap[entry.date] = { date: entry.date, calories: 0, burned: 0, water: 0 }
-        dayMap[entry.date].calories += entry.calories
+        if (!dayMap[entry.date])
+          dayMap[entry.date] = {
+            date: entry.date,
+            calories: 0,
+            protein: 0,
+            fat: 0,
+            carbs: 0,
+            burned: 0,
+            water: 0,
+          };
+        dayMap[entry.date].calories += entry.calories;
+      }
+      for (const entry of foodRes.data ?? []) {
+        if (!dayMap[entry.date])
+          dayMap[entry.date] = {
+            date: entry.date,
+            calories: 0,
+            protein: 0,
+            fat: 0,
+            carbs: 0,
+            burned: 0,
+            water: 0,
+          };
+        dayMap[entry.date].protein += entry.protein;
+      }
+      for (const entry of foodRes.data ?? []) {
+        if (!dayMap[entry.date])
+          dayMap[entry.date] = {
+            date: entry.date,
+            calories: 0,
+            protein: 0,
+            fat: 0,
+            carbs: 0,
+            burned: 0,
+            water: 0,
+          };
+        dayMap[entry.date].carbs += entry.carbs;
+      }
+      for (const entry of foodRes.data ?? []) {
+        if (!dayMap[entry.date])
+          dayMap[entry.date] = {
+            date: entry.date,
+            calories: 0,
+            protein: 0,
+            fat: 0,
+            carbs: 0,
+            burned: 0,
+            water: 0,
+          };
+        dayMap[entry.date].fat += entry.fat;
       }
       for (const entry of activityRes.data ?? []) {
-        if (!dayMap[entry.date]) dayMap[entry.date] = { date: entry.date, calories: 0, burned: 0, water: 0 }
-        dayMap[entry.date].burned += entry.calories_burned
+        if (!dayMap[entry.date])
+          dayMap[entry.date] = {
+            date: entry.date,
+            calories: 0,
+            burned: 0,
+            water: 0,
+            protein: 0,
+            fat: 0,
+            carbs: 0,
+          };
+        dayMap[entry.date].burned += entry.calories_burned;
       }
       for (const entry of waterRes.data ?? []) {
-        if (!dayMap[entry.date]) dayMap[entry.date] = { date: entry.date, calories: 0, burned: 0, water: 0 }
-        dayMap[entry.date].water += entry.amount_ml
+        if (!dayMap[entry.date])
+          dayMap[entry.date] = {
+            date: entry.date,
+            calories: 0,
+            burned: 0,
+            protein: 0,
+            fat: 0,
+            carbs: 0,
+            water: 0,
+          };
+        dayMap[entry.date].water += entry.amount_ml;
       }
-      return Object.values(dayMap).sort((a, b) => b.date.localeCompare(a.date))
+      return Object.values(dayMap).sort((a, b) => b.date.localeCompare(a.date));
     },
     enabled: !!user,
-  })
+  });
 
   function prevMonth() {
-    if (month === 1) { setMonth(12); setYear((y) => y - 1) }
-    else setMonth((m) => m - 1)
+    if (month === 1) {
+      setMonth(12);
+      setYear((y) => y - 1);
+    } else setMonth((m) => m - 1);
   }
 
   function nextMonth() {
-    const current = new Date()
-    if (year === current.getFullYear() && month === current.getMonth() + 1) return
-    if (month === 12) { setMonth(1); setYear((y) => y + 1) }
-    else setMonth((m) => m + 1)
+    const current = new Date();
+    if (year === current.getFullYear() && month === current.getMonth() + 1)
+      return;
+    if (month === 12) {
+      setMonth(1);
+      setYear((y) => y + 1);
+    } else setMonth((m) => m + 1);
   }
 
-  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1
+  const isCurrentMonth =
+    year === now.getFullYear() && month === now.getMonth() + 1;
   const isEarliestMonth = earliestMonth
     ? year === earliestMonth.year && month === earliestMonth.month
-    : false
-  const target = profile?.daily_calorie_target ?? 2000
-  const trackedDays = days.length
-  const avgCalories = trackedDays > 0 ? Math.round(days.reduce((s, d) => s + d.calories, 0) / trackedDays) : 0
-  const totalCaloriesMonth = days.reduce((s, d) => s + d.calories, 0)
-  const totalTargetMonth = days.reduce((s, d) => s + (target + d.burned), 0)
-  const totalDiff = totalCaloriesMonth - totalTargetMonth
+    : false;
+  const target = profile?.daily_calorie_target ?? 2000;
+  const trackedDays = days.length;
+  const avgCalories =
+    trackedDays > 0
+      ? Math.round(days.reduce((s, d) => s + d.calories, 0) / trackedDays)
+      : 0;
+  const avgProtein =
+    trackedDays > 0
+      ? Math.round(days.reduce((s, d) => s + d.protein, 0) / trackedDays)
+      : 0;
+  const avgCarbs =
+    trackedDays > 0
+      ? Math.round(days.reduce((s, d) => s + d.carbs, 0) / trackedDays)
+      : 0;
+  const avgFat =
+    trackedDays > 0
+      ? Math.round(days.reduce((s, d) => s + d.fat, 0) / trackedDays)
+      : 0;
+  const totalCaloriesMonth = days.reduce((s, d) => s + d.calories, 0);
+  const totalTargetMonth = days.reduce((s, d) => s + (target + d.burned), 0);
+  const totalDiff = totalCaloriesMonth - totalTargetMonth;
+  const totalProteinMonth = days.reduce((s, d) => s + d.protein, 0);
+  const totalCarbsMonth = days.reduce((s, d) => s + d.carbs, 0);
+  const totalFatMonth = days.reduce((s, d) => s + d.fat, 0);
 
   return (
     <div className="p-4">
@@ -147,7 +294,9 @@ export default function HistoryPage() {
         >
           <ChevronLeft size={20} />
         </button>
-        <span className="text-sm font-semibold text-[#F8FAFC]">{formatMonthLabel(year, month, t.dateLocale)}</span>
+        <span className="text-sm font-semibold text-[#F8FAFC]">
+          {formatMonthLabel(year, month, t.dateLocale)}
+        </span>
         <button
           onClick={nextMonth}
           disabled={isCurrentMonth}
@@ -165,26 +314,75 @@ export default function HistoryPage() {
               <TrendingUp size={13} className="text-indigo-400" />
               <span className="text-xs text-[#64748B]">{t.avgCalories}</span>
             </div>
-            <p className="text-xl font-bold text-[#F8FAFC]">{isLoading ? '–' : avgCalories.toLocaleString()}</p>
-            <p className="text-[10px] text-[#64748B]">{t.target} {target.toLocaleString()}</p>
+            <p className="text-xl font-bold text-[#F8FAFC]">
+              {isLoading ? '–' : avgCalories.toLocaleString()}
+            </p>
+            <p className="text-[10px] text-[#64748B]">
+              {t.target} {target.toLocaleString()}
+            </p>
           </div>
           <div>
             <div className="flex items-center gap-1.5 mb-1">
-              <TrendingUp size={13} className={!isLoading && totalDiff > 0 ? 'text-red-400' : 'text-emerald-400'} />
+              <TrendingUp
+                size={13}
+                className={
+                  !isLoading && totalDiff > 0
+                    ? 'text-red-400'
+                    : 'text-emerald-400'
+                }
+              />
               <span className="text-xs text-[#64748B]">{t.avgDiff}</span>
             </div>
-            <p className={`text-xl font-bold ${isLoading ? 'text-[#F8FAFC]' : totalDiff > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-              {isLoading ? '–' : `${totalDiff > 0 ? '+' : ''}${totalDiff.toLocaleString()}`}
+            <p
+              className={`text-xl font-bold ${isLoading ? 'text-[#F8FAFC]' : totalDiff > 0 ? 'text-red-400' : 'text-emerald-400'}`}
+            >
+              {isLoading
+                ? '–'
+                : `${totalDiff > 0 ? '+' : ''}${totalDiff.toLocaleString()}`}
             </p>
-            <p className="text-[10px] text-[#64748B]">{t.kcal} {t.thisMonth}</p>
+            <p className="text-[10px] text-[#64748B]">
+              {t.kcal} {t.thisMonth}
+            </p>
           </div>
           <div>
             <div className="flex items-center gap-1.5 mb-1">
               <Calendar size={13} className="text-indigo-400" />
               <span className="text-xs text-[#64748B]">{t.daysTracked}</span>
             </div>
-            <p className="text-xl font-bold text-[#F8FAFC]">{isLoading ? '–' : trackedDays}</p>
+            <p className="text-xl font-bold text-[#F8FAFC]">
+              {isLoading ? '–' : trackedDays}
+            </p>
             <p className="text-[10px] text-[#64748B]">{t.thisMonth}</p>
+          </div>
+        </div>
+        <hr className="my-4 border-0 border-t border-dashed border-[#334155]" />
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Beef size={18} color="#16A34A" strokeWidth={2} />
+              <span className="text-xs text-[#64748B]">{t.avgProtein}</span>
+            </div>
+            <p className="text-xl font-bold text-[#F8FAFC]">
+              {isLoading ? '–' : avgProtein.toLocaleString()}
+            </p>
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Wheat size={18} color="#2563EB" strokeWidth={2} />
+              <span className="text-xs text-[#64748B]">{t.avgCarbs}</span>
+            </div>
+            <p className="text-xl font-bold text-[#F8FAFC]">
+              {isLoading ? '–' : avgCarbs.toLocaleString()}
+            </p>
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Droplets size={18} color="#EA580C" strokeWidth={2} />
+              <span className="text-xs text-[#64748B]">{t.avgFat}</span>
+            </div>
+            <p className="text-xl font-bold text-[#F8FAFC]">
+              {isLoading ? '–' : avgFat.toLocaleString()}
+            </p>
           </div>
         </div>
       </div>
@@ -193,7 +391,10 @@ export default function HistoryPage() {
       {isLoading ? (
         <div className="space-y-2">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-16 bg-[#111118] rounded-2xl animate-pulse" />
+            <div
+              key={i}
+              className="h-16 bg-[#111118] rounded-2xl animate-pulse"
+            />
           ))}
         </div>
       ) : days.length === 0 ? (
@@ -204,10 +405,12 @@ export default function HistoryPage() {
       ) : (
         <div className="space-y-2">
           {days.map((day) => {
-            const dayTarget = (profile?.daily_calorie_target ?? 2000) + day.burned
-            const diff = day.calories - dayTarget
-            const isOver = diff > 0
-            const pct = dayTarget > 0 ? Math.round((day.calories / dayTarget) * 100) : 0
+            const dayTarget =
+              (profile?.daily_calorie_target ?? 2000) + day.burned;
+            const diff = day.calories - dayTarget;
+            const isOver = diff > 0;
+            const pct =
+              dayTarget > 0 ? Math.round((day.calories / dayTarget) * 100) : 0;
 
             return (
               <button
@@ -216,29 +419,39 @@ export default function HistoryPage() {
                 className="w-full bg-[#111118] border border-[#1E1E2E] hover:border-[#2A2A3E] rounded-2xl p-4 flex items-center justify-between transition-colors text-left"
               >
                 <div>
-                  <p className="font-medium text-[#F8FAFC] text-sm">{formatDayLabel(day.date, t.dateLocale)}</p>
+                  <p className="font-medium text-[#F8FAFC] text-sm">
+                    {formatDayLabel(day.date, t.dateLocale)}
+                  </p>
                   {day.burned > 0 && (
-                    <p className="text-xs text-amber-400 mt-0.5">🔥 {day.burned} {t.burned}</p>
+                    <p className="text-xs text-amber-400 mt-0.5">
+                      🔥 {day.burned} {t.burned}
+                    </p>
                   )}
                   {day.water > 0 && (
                     <p className="text-xs text-cyan-400 mt-0.5">
-                      💧 {day.water >= 1000
+                      💧{' '}
+                      {day.water >= 1000
                         ? `${(day.water / 1000).toFixed(1).replace('.0', '')}${t.liters}`
                         : `${day.water}${t.ml}`}
                     </p>
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-[#F8FAFC] tabular-nums">{day.calories.toLocaleString()} {t.kcal}</p>
-                  <p className={`text-xs font-medium ${isOver ? 'text-red-400' : 'text-emerald-400'}`}>
-                    {isOver ? '+' : ''}{diff} ({pct}%)
+                  <p className="font-bold text-[#F8FAFC] tabular-nums">
+                    {day.calories.toLocaleString()} {t.kcal}
+                  </p>
+                  <p
+                    className={`text-xs font-medium ${isOver ? 'text-red-400' : 'text-emerald-400'}`}
+                  >
+                    {isOver ? '+' : ''}
+                    {diff} ({pct}%)
                   </p>
                 </div>
               </button>
-            )
+            );
           })}
         </div>
       )}
     </div>
-  )
+  );
 }
