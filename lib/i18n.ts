@@ -417,7 +417,7 @@ export const translations = {
     avgCalories: 'Средно калории',
     avgProtein: 'Средно протеин',
     avgFat: 'Средно мазнини',
-    avgCarbs: 'Средно въхлехидрати',
+    avgCarbs: 'Средно въглехидрати',
     avgDiff: 'Общо +/–',
     day: 'ден',
     target: 'цел',
